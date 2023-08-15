@@ -14,7 +14,7 @@ if ($conn->connect_error) {
 }
 
 // Fetch data from the database
-$sql = "SELECT name, age, email FROM users";
+$sql = "SHOW TABLES";
 $result = $conn->query($sql);
 
 
@@ -23,12 +23,13 @@ if ($result->num_rows > 0) {
     // Output data of each row
 
     //กรณีที่รู้ตัวข้อมูล
+    /*
     while ($row = $result->fetch_assoc()) {
         echo "Name: " . $row["name"] . " - Age: " . $row["age"] . " - Email: " . $row["email"] . "<br>";
     }
-
+    */
     //กรณีที่ต้องการแสดงทั้งหมด
-    /*
+    
     while ($row = $result->fetch_assoc()) {
         echo "<tr>";
         foreach ($row as $columnName => $columnValue) {
@@ -36,7 +37,7 @@ if ($result->num_rows > 0) {
         }
         echo "</tr>";
     }
-    */    
+        
 } else {
     echo "No data found";
 }
