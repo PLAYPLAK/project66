@@ -5,7 +5,7 @@ from discord.ext import commands
 from datetime import datetime
 
 # กำหนดค่า Token ที่คุณคัดลอกมาจาก Developer Portal
-TOKEN = 'MTEzNjU5MTEzNDk3NDU1NDE5Mw.GQy8Zs.ZEZC8dKWJQ0GkE5DGO1bYBDAEpZVcI--T1iETg'
+TOKEN = ''
 
 # สร้างบอทเป็น Client ของ discord.py
 intents = discord.Intents.default()
