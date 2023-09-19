@@ -1,6 +1,5 @@
 import discord
-import json
-import re
+import testbot
 from discord.ext import commands
 from datetime import datetime
 
@@ -13,61 +12,6 @@ intents.typing = False
 intents.presences = False
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
-
-#Load json data
-def load_json(file):
-    with open(file, encoding='utf-8') as bot_responses:
-        print(f"Loaded '{file}' successfully!")
-        return json.load(bot_responses)
-
-
-# Store JSON data
-response_data = load_json("bot.json")
-
-#Respone data
-def get_response(input_string):
-    split_message = re.split(r'\s+|[,;?!.-]\s*', input_string.lower())
-    
-    print(split_message)
-
-    score_list = []
-
-    # Check all the responses
-    for response in response_data:
-        response_score = 0
-        required_score = 0
-        required_words = response["required_words"]
-
-        # Check if there are any required words
-        if required_words:
-            for word in split_message:
-                if word in required_words:
-                    required_score += 1
-
-        # Amount of required words should match the required score
-        if required_score == len(required_words):
-            # print(required_score == len(required_words))
-            # Check each word the user has typed
-            for word in split_message:
-                # If the word is in the response, add to the score
-                if word in response["user_input"]:
-                    response_score += 1
-
-        # Add score to list
-        score_list.append(response_score)
-        # Debugging: Find the best phrase
-        # print(response_score, response["user_input"])
-
-    # Find the best response and return it if they're not all 0
-    best_response = max(score_list)
-    response_index = score_list.index(best_response)
-
-    if input_string == "":
-        return "Please type something so we can chat :("
-
-    # If there is no good response, return a random one.
-    if best_response != 0:
-        return response_data[response_index]["bot_response"]
 
 # เหตุการณ์เมื่อบอทเรียกพร้อมใช้งาน
 @bot.event
@@ -113,7 +57,6 @@ async def profile(ctx):
 
     await ctx.send(embed=embed)
 
-
 @bot.command()
 async def add(ctx, a: int, b: int):
     result = a + b
@@ -153,8 +96,8 @@ async def dev(ctx):
         await ctx.send(embed=embed)
 
 
-
 # ตอบกลับข้อความ
+
 
 
 @bot.event
@@ -163,7 +106,7 @@ async def on_message(message):
         return
 
     else:
-        text = get_response(message.content)
+        text = testbot.chattotalk(message.content)
         
         await message.channel.send(f'{message.author.mention} {text}')
 
