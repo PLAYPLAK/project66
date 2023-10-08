@@ -1,46 +1,51 @@
-import json
-import re
+from chatterbot import ChatBot
+from chatterbot.trainers import ListTrainer
 
-# Load JSON data
-def load_json(file):
-    with open(file, encoding='utf-8') as bot_responses:
-        print(f"Loaded '{file}' successfully!")
-        return json.load(bot_responses)
+# Create a chatbot instance
+chatbot = ChatBot('ThaiDataBot')
 
-# Store JSON data
-response_data = load_json("bot.json")
+# Create a new trainer for the chatbot
+trainer = ListTrainer(chatbot)
 
-# Function to get a response based on user input
-def get_response(input_string):
-    split_message = re.split(r'\s+|[,;?!.-]\s*', input_string)
-    score_list = []
+# Define your custom dataset as conversation pairs in Thai
+custom_data_thai = [
+    'สวัสดี', 'สวัสดีครับ',
+    'ทำอะไร', 'กำลังเรียนรู้เพิ่มเติม',
+    'ยินดีที่ได้พบคุณ', 'ยินดีด้วยครับ',
+    'สุขสันต์วันเกิด', 'ขอบคุณมากครับ',
+    'อากาศวันนี้เป็นอย่างไร', 'อากาศดีมากครับ',
+    'คุณชอบกินอาหารชาบูหรือยำแซลมอน?', 'ชอบกินยำแซลมอนครับ',
+    'มีแหวกมีกัด', 'เราไม่ควรแหวกมีกัด',
+    'คุณอายุเท่าไหร่', 'ผมยังเป็นโมเดลภาษาที่เรียนรู้เท่านั้น',
+    'คุณชอบดูภาพยนตร์หรืออ่านหนังสือมากกว่ากัน', 'ฉันไม่มีความสามารถในการดูหนังหรืออ่านหนังสือ',
+    'มีแนวทางในการเริ่มต้นการเรียนภาษาไทยหรือไม่', 'ควรเริ่มต้นด้วยการฝึกพูดและฟัง',
+]
+#พูดคุยลงทะเบียน
+dataset_01 = []
+#เกี่ยวกับสอบถามข้อมูล
+dataset_02 = []
+#เกี่ยวกับขอช่องทางการติดต่อ
+dataset_03 = []
+#เกี่ยวกับรายวิชา
+dataset_04 = []
 
-    for response in response_data:
-        response_score = 0
-        required_score = 0
-        required_words = response.get("required_words", [])
 
-        if required_words:
-            for word in split_message:
-                if word in required_words:
-                    required_score += 1
+# Train the chatbot on the custom dataset
+trainer.train(custom_data_thai)
 
-        if required_score == len(required_words):
-            for word in split_message:
-                if word in response["user_input"]:
-                    response_score += 1
+# Start a conversation with the chatbot
+print("Bot: สวัสดีครับ! ผมคือ ThaiDataBot คุณสามารถสนทนากับผมได้")
 
-        score_list.append(response_score)
 
-    best_response = max(score_list)
-    response_index = score_list.index(best_response)
+def chattotalk(text):
+    user_input = text
+    
+    # Exit the loop if the user says "exit"
+    if user_input.lower() == 'exit':
+        print("Bot: ลาก่อยครับ!")
 
-    if input_string == "":
-        return "Please type something so we can chat :("
+    # Get the chatbot's response
+    response = chatbot.get_response(user_input)
+    #print("Bot:", response)
 
-    if best_response != 0:
-        return response_data[response_index]["bot_response"]
-
-while True:
-    user_input = input("You: ")
-    print("Bot:", get_response(user_input))
+    return response
