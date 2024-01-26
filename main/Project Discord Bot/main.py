@@ -97,25 +97,8 @@ class RegisterModal(discord.ui.Modal, title='Register'):
         async def on_error(self, interaction : discord.Interaction, error):
             ...
 
+
 class GroupworkView(discord.ui.View):
-    def __init__(self, topic: str, member_amount: int):
-        super().__init__()
-
-        self.topic = topic
-        self.member_amount = member_amount
-
-        
-
-    @discord.ui.button(label='Join', style=discord.ButtonStyle.green)
-    async def join(self,  interaction : discord.Interaction):
-        new_embed = discord.Embed(
-            title=' updated by ',
-            description=f"จำนวน :  คน",
-            color=discord.Color.green(),
-        )
-        await interaction.response.send_message('success')
-
-class TestGroup(discord.ui.View):
     def __init__(self, topic: str, member_amount: int, sub: int, member: str):
         super().__init__()
 
@@ -125,32 +108,28 @@ class TestGroup(discord.ui.View):
         self.sub = sub
         self.remaining =  member_amount - self.sub 
 
-        self.member = [member]
+        self.member = member
         
 
         self.embed = discord.Embed(
-            title=f'{topic}',
-            description=f"จำนวน : {member_amount} คน"+
-                        f"\nเหลืออีก {self.remaining} คน",
-            color=discord.Color.green()
+            title=f'📢   {topic}   📌',
+            description=f"กลุ่มจำนวน : **{member_amount}** คน"+
+                        f"\nเหลืออีก : **{self.remaining}** คน",
+            color=discord.Color.random()
         )
         
+        self.embed.set_thumbnail(url='') #ใส่รูป
+
         self.update_embed()
 
 
     def update_embed(self):
         self.embed.remove_field(0)
         self.embed.add_field(
-            name='รายชื่อสมาชิก',
+            name='👤 รายชื่อสมาชิก',
             value='\n'.join(f"{self.member[item]}" for item in range(len(self.member))),
             inline=False
         )    
-        # self.embed.add_field(
-        #     name='รายชื่อสมาชิก',
-        #     value='\n'.join([f"{item}" for item in self.member]),
-        #     inline=False
-        # )
-
         
 
     @discord.ui.button(label='Join', style=discord.ButtonStyle.green)
@@ -160,26 +139,49 @@ class TestGroup(discord.ui.View):
 
         if self.remaining > 0 :
 
-            testg = TestGroup(self.topic, self.member_amount, (self.sub+1), self.member)
+            testg = GroupworkView(self.topic, self.member_amount, (self.sub+1), self.member)
             testg.update_embed()
             await interaction.response.edit_message(embed=testg.embed, view=testg)
-        
+            print(self.member)
+            print(self.remaining)
+
         else:
             button.disabled = True
             await interaction.response.edit_message(embed=self.embed, view=self)
 
+        # ตรวจสอบว่าคนครบแล้ว
+        if self.remaining == 1:
+            # รวม mention ทุกคนในกลุ่ม
+            mention_string = ' '.join([f'<@{interaction.guild.get_member_named(member_name).id}>' for member_name in self.member])
+            await interaction.followup.send(f'🎉 กลุ่ม **"{self.topic}"** ครบจำนวนแล้ว, สามารถเริ่มงานได้เลยครับ 🎉 {mention_string}')
+
+        else:
+            button.disabled = True
+
     
-    @discord.ui.button(label='Leave', style=discord.ButtonStyle.red)
-    async def leave(self, interaction : discord.Interaction, button : discord.ui.Button):
+    # @discord.ui.button(label='Leave', style=discord.ButtonStyle.red)
+    # async def leave(self, interaction : discord.Interaction, button : discord.ui.Button):
         
-        if self.remaining == self.member_amount:
+    #     if self.remaining == self.member_amount:
+    #         button.disabled = True
+    #         await interaction.response.edit_message(embed=self.embed, view=self)
+    #     else: 
+    #         button.disabled = False   
+    #         testg = GroupworkView(self.topic, self.member_amount, (self.sub-1))
+    #         await interaction.response.edit_message(embed=testg.embed, view=testg)
+
+    @discord.ui.button(label='Leave', style=discord.ButtonStyle.red)
+    async def leave(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.sub > 0:
+            button.disabled = False
+            # ตรวจสอบว่า interaction.user.display_name อยู่ใน self.member หรือไม่
+            if str(interaction.user.display_name) in self.member:
+                self.member.remove(str(interaction.user.display_name))  # ลบชื่อคนที่กดปุ่ม Leave ออกจาก self.member
+            testg = GroupworkView(self.topic, self.member_amount, (self.sub - 1), self.member)
+            await interaction.response.edit_message(embed=testg.embed, view=testg)
+        else:
             button.disabled = True
             await interaction.response.edit_message(embed=self.embed, view=self)
-        else: 
-            button.disabled = False   
-            testg = TestGroup(self.topic, self.member_amount, (self.sub-1))
-            await interaction.response.edit_message(embed=testg.embed, view=testg)
-
         
         
     async def on_timeout(self):
@@ -204,32 +206,7 @@ class Profile(discord.ui.View):
         # Cleanup logic if needed
         pass
    
-class SimpleView(discord.ui.View):
-    
-    foo : bool = None
-    
-    async def disable_all_items(self):
-        for item in self.children:
-            item.disabled = True
-        await self.message.edit(view=self)
-    
-    async def on_timeout(self) -> None:
-        await self.message.channel.send("Timedout")
-        await self.disable_all_items()
-    
-    @discord.ui.button(label="Hello", 
-                       style=discord.ButtonStyle.success)
-    async def hello(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("World")
-        self.foo = True
-        self.stop()
-        
-    @discord.ui.button(label="Cancel", 
-                       style=discord.ButtonStyle.red)
-    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("Cancelling")
-        self.foo = False
-        self.stop()
+
 
 
 def run():
@@ -243,7 +220,11 @@ def run():
     @bot.event
     async def on_ready():#เมื่อบอททำงาน
         logger.info(f"User: {bot.user} (ID: {bot.user.id})")
-        logger.info(f'Guild ID : {bot.guilds[0].id}')
+
+        #แสดงไอดีและชื่อของ guilds ทั้งหมดที่บอทอยู่
+        for guild in bot.guilds:
+            logger.info(f'Guild Name: {guild.name} (ID: {guild.id})')
+
         await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.playing, name="Discord"))#สถานะของบอท
         print(colors.GREEN + '.'*32 +'Bot is started' + '.'*32 + colors.RESET)
        
@@ -273,6 +254,7 @@ def run():
 
         # print(f'Logged in as {bot.user.name} - {bot.user.id}')#แสดงชื่อบอทกับไอดี
         
+        
 
         bot.tree.copy_global_to(guild=settings.GUILDS_ID)
         await bot.tree.sync(guild=settings.GUILDS_ID)
@@ -290,40 +272,23 @@ def run():
 #slash commands zone
 
     #register
-    @bot.tree.command(description='register for new member') #คำอธิบายของคำสั่ง
+    @bot.tree.command(description='Register for New member | ลงทะเบียนสำหรับสมาชิกใหม่') #คำอธิบายของคำสั่ง
     async def register(interaction : discord.Interaction):
         register_modal = RegisterModal()
         register_modal.user = interaction.user
         await interaction.response.send_modal(register_modal)
 
 
-    #groupwork
-    @bot.tree.command(description='find groupwork') #คำอธิบายของคำสั่ง
-    @app_commands.describe(topic = 'รายละเอียดหัวข้อของกลุ่มที่จะสร้าง', member_amount = 'จำนวนสมาชิกในกลุ่ม') #คำอธิบายของตัวเลือกย่อย
-    async def group(interaction : discord.Interaction, topic : str , member_amount : int):
-        group_view = GroupworkView(topic, member_amount)
-        embed = discord.Embed(
-            title=f'{topic}',
-            description=f"จำนวน : {member_amount} คน",
-            color=discord.Color.green(),
-        )
-        # view = discord.ui.View()
-        # button1 = discord.ui.Button(label='Join', style=discord.ButtonStyle.green)
-        # button2 = discord.ui.Button(label='leave', style=discord.ButtonStyle.red)
-        # view.add_item(button1)
-        # view.add_item(button2)
-        
-        await interaction.response.send_message(view=group_view, embed=embed)
-
     #profile
-    @bot.tree.command(description='view profile')
+    @bot.tree.command(description='View profile | ดูโปรไฟล์ของผู้ใช้')
     @app_commands.describe(of='ดูโปรไฟล์ของผู้ใช้ที่กำหนด')
     async def profile(interaction: discord.Interaction, of: discord.Member):
         view = Profile(of)
         await interaction.response.send_message(embed=view.embed, view=view, ephemeral=True)
         
+
     #study_plan
-    @bot.tree.command(description='manage study plan')
+    @bot.tree.command(description='Manage study plan | จัดการตารางเรียน')
     @app_commands.choices(day=[
         app_commands.Choice(name="🟡 Monday - วันจันทร์", value="1"),
         app_commands.Choice(name="🩷 Tuesday - วันอังคาร", value="2"),
@@ -335,10 +300,10 @@ def run():
         
     ])
     @app_commands.describe(day= 'วัน', start ='เวลาเริ่มเรียน EX. 18.00', until = 'เวลาเลิกเรียน EX. 18.00', subject='=ชื่อวิชา')
-    async def study_plan(interaction: discord.Interaction, day : app_commands.Choice[str], start : str, until : str, subject : str):
+    async def study_plan(interaction: discord.Interaction, day : app_commands.Choice[str], start : str , until : str, subject : str):
         embed = discord.Embed(
             title='Study Plan',
-            description=f"รายละเอียด",
+            description="รายละเอียด",
             color=discord.Color.green(),
         )
         embed.add_field(
@@ -348,11 +313,14 @@ def run():
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    
-    @bot.tree.command(description='test group')
-    async def testgroup(interaction: discord.Interaction, topic: str, member_amount: int):
+
+    #groupwork
+    @bot.tree.command(description='Create groupwork | สร้างกลุ่มงาน')
+    @app_commands.describe(topic='หัวข้อ', member_amount='จำนวนสมาชิก')
+    async def groupwork(interaction: discord.Interaction, topic: str, member_amount: int):
         # print(interaction.user.display_name)
-        view = TestGroup(topic, member_amount, 1, str(interaction.user.display_name))
+        initial_member = [interaction.user.display_name]
+        view = GroupworkView(topic, member_amount, 1, initial_member)
         await interaction.response.send_message(embed=view.embed, view=view)
     
 
@@ -364,26 +332,7 @@ def run():
         await ctx.send('Unused Commands deleted.')
 
     
-    @bot.command()
-    async def button(ctx):
-        view = SimpleView(timeout=50)
-        # button = discord.ui.Button(label="Click me")
-        # view.add_item(button)
-        
-        message = await ctx.send(view=view)
-        view.message = message
-        
-        await view.wait()
-        await view.disable_all_items()
-        
-        if view.foo is None:
-            logger.error("Timeout")
-            
-        elif view.foo is True:
-            logger.error("Ok")
-            
-        else:
-            logger.error("cancel")
+    
 
     bot.run(settings.DISCORD_API_SECRET, root_logger=True)#ทำงานด้วยโทเคน
 
