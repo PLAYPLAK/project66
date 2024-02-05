@@ -4,6 +4,7 @@ from typing import Any
 from discord.interactions import Interaction
 import settings
 import discord
+import aiosqlite
 import traceback
 # import utils
 import typing
@@ -11,6 +12,7 @@ import enum
 from datetime import datetime
 from discord.ext import commands
 from discord import app_commands
+
 
 
 logger = settings.logging.getLogger("bot")
@@ -43,6 +45,7 @@ class RegisterModal(discord.ui.Modal, title='Register'):
     async def on_submit(self, interaction : discord.Interaction):
 
         channel = interaction.guild.get_channel(settings.FEEDBACK_CH) #ดึงช่องที่ต้องการส่งข้อความ
+
         
         embed1 = discord.Embed(
             title="Register success!!",
@@ -80,7 +83,7 @@ class RegisterModal(discord.ui.Modal, title='Register'):
         guild = interaction.guild
         member = guild.get_member(interaction.user.id)
 
-        role_id_1 = 1156128662756786216  # กำหนด id ของ role
+        role_id_1 = 1203950522952851526  # กำหนด id ของ role
 
         # ดึง role ที่ต้องการจะกำหนด
         role_1 = discord.utils.get(guild.roles, id=role_id_1)
@@ -99,17 +102,17 @@ class RegisterModal(discord.ui.Modal, title='Register'):
 
 
 class GroupworkView(discord.ui.View):
-    def __init__(self, topic: str, member_amount: int, sub: int, member: str):
+    def __init__(self, topic: str, member_amount: int, member: str):
         super().__init__()
 
         self.topic = topic
         self.member_amount = member_amount
 
-        self.sub = sub
-        self.remaining =  member_amount - self.sub 
-
         self.member = member
         
+        # self.sub = sub
+        self.sub = len(self.member)
+        self.remaining =  member_amount - self.sub 
 
         self.embed = discord.Embed(
             title=f'📢   {topic}   📌',
@@ -125,9 +128,11 @@ class GroupworkView(discord.ui.View):
 
     def update_embed(self):
         self.embed.remove_field(0)
+        member_list_with_numbers = [f"{index + 1}. {self.member[index]}" for index in range(len(self.member))]
         self.embed.add_field(
             name='👤 รายชื่อสมาชิก',
-            value='\n'.join(f"{self.member[item]}" for item in range(len(self.member))),
+            # value='\n'.join(f"{self.member[item]}" for item in range(len(self.member))),
+            value='\n'.join(member_list_with_numbers),
             inline=False
         )    
         
@@ -139,11 +144,9 @@ class GroupworkView(discord.ui.View):
 
         if self.remaining > 0 :
 
-            testg = GroupworkView(self.topic, self.member_amount, (self.sub+1), self.member)
+            testg = GroupworkView(self.topic, self.member_amount, self.member)
             testg.update_embed()
             await interaction.response.edit_message(embed=testg.embed, view=testg)
-            print(self.member)
-            print(self.remaining)
 
         else:
             button.disabled = True
@@ -158,17 +161,6 @@ class GroupworkView(discord.ui.View):
         else:
             button.disabled = True
 
-    
-    # @discord.ui.button(label='Leave', style=discord.ButtonStyle.red)
-    # async def leave(self, interaction : discord.Interaction, button : discord.ui.Button):
-        
-    #     if self.remaining == self.member_amount:
-    #         button.disabled = True
-    #         await interaction.response.edit_message(embed=self.embed, view=self)
-    #     else: 
-    #         button.disabled = False   
-    #         testg = GroupworkView(self.topic, self.member_amount, (self.sub-1))
-    #         await interaction.response.edit_message(embed=testg.embed, view=testg)
 
     @discord.ui.button(label='Leave', style=discord.ButtonStyle.red)
     async def leave(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -177,28 +169,54 @@ class GroupworkView(discord.ui.View):
             # ตรวจสอบว่า interaction.user.display_name อยู่ใน self.member หรือไม่
             if str(interaction.user.display_name) in self.member:
                 self.member.remove(str(interaction.user.display_name))  # ลบชื่อคนที่กดปุ่ม Leave ออกจาก self.member
-            testg = GroupworkView(self.topic, self.member_amount, (self.sub - 1), self.member)
+            testg = GroupworkView(self.topic, self.member_amount, self.member)
             await interaction.response.edit_message(embed=testg.embed, view=testg)
         else:
             button.disabled = True
             await interaction.response.edit_message(embed=self.embed, view=self)
-        
+            
+            
         
     async def on_timeout(self):
         # Cleanup logic if needed
         pass
 
-        
+
+class StudyPlanEmbed(discord.ui.View):
+    def __init__(self, day_name: str, start_time: str, end_time: str, subject: str):
+        super().__init__()
+
+        self.embed = discord.Embed(
+            title='Study Plan',
+            description="รายละเอียด",
+            color=discord.Color.green(),
+        )
+        self.embed.add_field(
+            name=day_name,
+            value=f'   {start_time} น. - {end_time} น. | {subject}',
+            inline=False
+        )       
 
 
 class Profile(discord.ui.View):
     def __init__(self, of: discord.Member):
         super().__init__()
-
+        
         self.embed = discord.Embed(
             title=f'Profile',
-            description=f"Name : {of.display_name}",
+            description=f"Name : {of.display_name}"+
+                        f"\nUsername : {of.name}",
             color=discord.Color.green(),
+        )
+        self.embed.add_field(
+            name='ID',
+            value=f'{of.id}',
+            inline=False
+        )
+        self.embed.add_field(
+            name='E-mail',
+            value=f'{of.display_name}@gmail.com',
+            inline=False
         )
         self.embed.set_thumbnail(url=of.avatar)
 
@@ -228,42 +246,49 @@ def run():
         await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.playing, name="Discord"))#สถานะของบอท
         print(colors.GREEN + '.'*32 +'Bot is started' + '.'*32 + colors.RESET)
        
-
+        #load cogs
         for cogs_file in settings.COGS_DIR.glob("*.py"):
             if cogs_file != "__init__.py":
                 await bot.load_extension(f"cogs.{cogs_file.name[:-3]}") #เพิ่มคำสั่งจากไฟล์นอก
                 print(colors.BLUE + 'import : ' + colors.RESET + f' {cogs_file}' + colors.GREEN + '  success' + colors.RESET)
                 
         
-        
-        # mygroup1 = MyGroup1(name=greetings,description='Welcome User')
-        # bot.tree.add_command(mygroup1)
                 
         # for slashcommands_file in settings.SLASHCOMMANDS_DIR.glob("*.py"):
         #     if slashcommands_file != "__init__.py":
         #         await bot.load_extension(f"slashcommands.{slashcommands_file.name[:-3]}")                    #ต้องแก้
         #         print('import slash_cmds success')
                 
-    
-
 
         # for cmd_file in settings.CMDS_DIR.glob("*.py"):
         #     if cmd_file.name != "__init__.py":
         #         await bot.load_extension(f"cmds.{cmd_file.name[:-3]}")
         #         print(f'import {cmd_file} success')
 
-        # print(f'Logged in as {bot.user.name} - {bot.user.id}')#แสดงชื่อบอทกับไอดี
         
-        
+        #sync slash commands global
+        try:
+            synced = await bot.tree.sync()
+            print(f'synced {len(synced)} commands')
+        except Exception as e:
+            print(e)
+            
+        #sync slash commands guild
+        # bot.tree.copy_global_to(guild=settings.GUILDS_ID)
+        # await bot.tree.sync(guild=settings.GUILDS_ID)
+            
 
-        bot.tree.copy_global_to(guild=settings.GUILDS_ID)
-        await bot.tree.sync(guild=settings.GUILDS_ID)
+        #connect database
+        # bot.db = await aiosqlite.connect('Main.db')
+        # c = await bot.db.cursor()
+        # await c.execute("CREATE TABLE IF NOT EXISTS users(user_id INTEGER)")
+        # await bot.db.commit()
 
         print(colors.YELLOW + '...................Bot is working Press Ctrl+c for stop Bot...................' + colors.RESET)
 
 #context menu zone
 
-    @bot.tree.context_menu(name="Student Profile")
+    @bot.tree.context_menu(name="View Profile")
     async def get_profile(interaction: discord.Interaction, of : discord.Member):
         view = Profile(of)
         await interaction.response.send_message(embed=view.embed, view=view, ephemeral=True)
@@ -276,7 +301,12 @@ def run():
     async def register(interaction : discord.Interaction):
         register_modal = RegisterModal()
         register_modal.user = interaction.user
-        await interaction.response.send_modal(register_modal)
+        channel = interaction.guild.get_channel(settings.FEEDBACK_CH) #ดึงช่องที่ต้องการส่งข้อความ
+        if settings.FEEDBACK_CH and interaction.channel_id != settings.FEEDBACK_CH:
+            await interaction.response.send_message("คำสั่งนี้สามารถใช้ได้เฉพาะในช่องที่กำหนดเท่านั้น", ephemeral=True)
+        else:
+            await interaction.response.send_modal(register_modal) #รองรับการกำหนด channel ที่ใช้งานได้
+        
 
 
     #profile
@@ -285,33 +315,25 @@ def run():
     async def profile(interaction: discord.Interaction, of: discord.Member):
         view = Profile(of)
         await interaction.response.send_message(embed=view.embed, view=view, ephemeral=True)
+            
         
 
     #study_plan
     @bot.tree.command(description='Manage study plan | จัดการตารางเรียน')
-    @app_commands.choices(day=[
-        app_commands.Choice(name="🟡 Monday - วันจันทร์", value="1"),
-        app_commands.Choice(name="🩷 Tuesday - วันอังคาร", value="2"),
-        app_commands.Choice(name="🟢 Wednesday - วันพุธ", value="3"),
-        app_commands.Choice(name="🟠 Thursday - วันพฤหัสบดี", value="4"),
-        app_commands.Choice(name="🔵 Friday - วันศุกร์", value="5"),
-        app_commands.Choice(name="🟣 Saturday - วันเสาร์", value="6"),
-        app_commands.Choice(name="🔴 Sunday - วันอาทิตย์", value="7"),
-        
-    ])
-    @app_commands.describe(day= 'วัน', start ='เวลาเริ่มเรียน EX. 18.00', until = 'เวลาเลิกเรียน EX. 18.00', subject='=ชื่อวิชา')
-    async def study_plan(interaction: discord.Interaction, day : app_commands.Choice[str], start : str , until : str, subject : str):
-        embed = discord.Embed(
-            title='Study Plan',
-            description="รายละเอียด",
-            color=discord.Color.green(),
-        )
-        embed.add_field(
-            name=f'{day.name}',
-            value=f'   {start} น. - {until} น. | {subject}',
-            inline=False
-        )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+    @app_commands.choices(
+        day=[
+            app_commands.Choice(name="🔴 Sunday - วันอาทิตย์", value="1"),
+            app_commands.Choice(name="🟡 Monday - วันจันทร์", value="2"), 
+            app_commands.Choice(name="🩷 Tuesday - วันอังคาร", value="3"),
+            app_commands.Choice(name="🟢 Wednesday - วันพุธ", value="4"),
+            app_commands.Choice(name="🟠 Thursday - วันพฤหัสบดี", value="5"),
+            app_commands.Choice(name="🔵 Friday - วันศุกร์", value="6"),
+            app_commands.Choice(name="🟣 Saturday - วันเสาร์", value="7"),
+        ])
+    @app_commands.describe(day='วัน', start='เวลาเริ่มเรียน **EX. 09.00**', until='เวลาเลิกเรียน **EX. 18.00**', subject='ชื่อวิชา')
+    async def study_plan_edit(interaction: discord.Interaction, day: app_commands.Choice[str], start: str, until: str, subject: str):
+        study_plan_embed = StudyPlanEmbed(day.name, start, until, subject)
+        await interaction.response.send_message(embed=study_plan_embed.embed, view=study_plan_embed)
 
 
     #groupwork
@@ -320,8 +342,17 @@ def run():
     async def groupwork(interaction: discord.Interaction, topic: str, member_amount: int):
         # print(interaction.user.display_name)
         initial_member = [interaction.user.display_name]
-        view = GroupworkView(topic, member_amount, 1, initial_member)
+        view = GroupworkView(topic, member_amount, initial_member)
         await interaction.response.send_message(embed=view.embed, view=view)
+    
+
+    #random
+    @bot.tree.command(description='Random | การสุ่ม')
+    @app_commands.describe(entries='สิ่งที่ต้องการสุ่ม โดยใช้ช่องว่างเป็นตัวคั่น')
+    async def randoms(interaction: discord.Interaction, entries: str):
+        entries_list = entries.split(' ')
+        random_result = random.choice(entries_list)
+        await interaction.response.send_message(f'ผลลัพธ์ที่ได้คือ {random_result}', ephemeral=True)
     
 
     #delete commands unused
