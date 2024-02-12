@@ -138,28 +138,30 @@ class GroupworkView(discord.ui.View):
         
 
     @discord.ui.button(label='Join', style=discord.ButtonStyle.green)
-    async def join(self, interaction : discord.Interaction, button : discord.ui.Button):
+    async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
         new_member_name = str(interaction.user.display_name)
-        self.member.append(new_member_name)
 
-        if self.remaining > 0 :
+        # ตรวจสอบว่า new_member_name อยู่ใน self.member หรือไม่
+        if new_member_name not in self.member:
+            self.member.append(new_member_name)
 
-            testg = GroupworkView(self.topic, self.member_amount, self.member)
-            testg.update_embed()
-            await interaction.response.edit_message(embed=testg.embed, view=testg)
+            if self.remaining > 0:
+                testg = GroupworkView(self.topic, self.member_amount, self.member)
+                testg.update_embed()
+                await interaction.response.edit_message(embed=testg.embed, view=testg)
+            else:
+                button.disabled = True
+                await interaction.response.edit_message(embed=self.embed, view=self)
+
+                # ตรวจว่ากลุ่มครบจำนวนแล้วหรือยัง
+                if self.remaining == 1:
+                    mention_string = ' '.join([f'<@{interaction.guild.get_member_named(member_name).id}>' for member_name in self.member])
+                    await interaction.followup.send(f'🎉 กลุ่ม **"{self.topic}"** ครบจำนวนแล้ว, สามารถเริ่มงานได้เลยครับ 🎉 {mention_string}')
 
         else:
-            button.disabled = True
             await interaction.response.edit_message(embed=self.embed, view=self)
+            await interaction.followup.send(f'คุณ **{new_member_name}** ได้เข้าร่วมกลุ่ม **"{self.topic}"** ไปแล้ว', ephemeral=True)
 
-        # ตรวจสอบว่าคนครบแล้ว
-        if self.remaining == 1:
-            # รวม mention ทุกคนในกลุ่ม
-            mention_string = ' '.join([f'<@{interaction.guild.get_member_named(member_name).id}>' for member_name in self.member])
-            await interaction.followup.send(f'🎉 กลุ่ม **"{self.topic}"** ครบจำนวนแล้ว, สามารถเริ่มงานได้เลยครับ 🎉 {mention_string}')
-
-        else:
-            button.disabled = True
 
 
     @discord.ui.button(label='Leave', style=discord.ButtonStyle.red)
@@ -213,11 +215,11 @@ class Profile(discord.ui.View):
             value=f'{of.id}',
             inline=False
         )
-        self.embed.add_field(
-            name='E-mail',
-            value=f'{of.display_name}@gmail.com',
-            inline=False
-        )
+        # self.embed.add_field(
+        #     name='E-mail',
+        #     value=f'{of.display_name}@gmail.com',
+        #     inline=False
+        # )
         self.embed.set_thumbnail(url=of.avatar)
 
     async def on_timeout(self):
@@ -267,15 +269,15 @@ def run():
 
         
         #sync slash commands global
-        try:
-            synced = await bot.tree.sync()
-            print(f'synced {len(synced)} commands')
-        except Exception as e:
-            print(e)
+        # try:
+        #     synced = await bot.tree.sync()
+        #     print(f'synced {len(synced)} commands')
+        # except Exception as e:
+        #     print(e)
             
         #sync slash commands guild
-        # bot.tree.copy_global_to(guild=settings.GUILDS_ID)
-        # await bot.tree.sync(guild=settings.GUILDS_ID)
+        bot.tree.copy_global_to(guild=settings.GUILDS_ID)
+        await bot.tree.sync(guild=settings.GUILDS_ID)
             
 
         #connect database
@@ -297,15 +299,27 @@ def run():
 #slash commands zone
 
     #register
-    @bot.tree.command(description='Register for New member | ลงทะเบียนสำหรับสมาชิกใหม่') #คำอธิบายของคำสั่ง
-    async def register(interaction : discord.Interaction):
+    @bot.tree.command(description='Register for New member | ลงทะเบียนสำหรับสมาชิกใหม่') 
+    async def register(interaction: discord.Interaction):
+        FEEDBACK_CH = [1187345770400194654, 1162039634579177494] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
+        valid_channel = interaction.channel_id in FEEDBACK_CH
+
+        if not valid_channel:
+            await interaction.response.send_message("คำสั่งนี้สามารถใช้ได้เฉพาะในช่องที่กำหนดเท่านั้น", ephemeral=True)
+            return
+
         register_modal = RegisterModal()
         register_modal.user = interaction.user
-        channel = interaction.guild.get_channel(settings.FEEDBACK_CH) #ดึงช่องที่ต้องการส่งข้อความ
-        if settings.FEEDBACK_CH and interaction.channel_id != settings.FEEDBACK_CH:
-            await interaction.response.send_message("คำสั่งนี้สามารถใช้ได้เฉพาะในช่องที่กำหนดเท่านั้น", ephemeral=True)
-        else:
-            await interaction.response.send_modal(register_modal) #รองรับการกำหนด channel ที่ใช้งานได้
+        await interaction.response.send_modal(register_modal)
+    # @bot.tree.command(description='Register for New member | ลงทะเบียนสำหรับสมาชิกใหม่') #คำอธิบายของคำสั่ง
+    # async def register(interaction : discord.Interaction):
+    #     register_modal = RegisterModal()
+    #     register_modal.user = interaction.user
+    #     channel = interaction.guild.get_channel(settings.FEEDBACK_CH) #ดึงช่องที่ต้องการส่งข้อความ
+    #     if settings.FEEDBACK_CH and interaction.channel_id != settings.FEEDBACK_CH:
+    #         await interaction.response.send_message("คำสั่งนี้สามารถใช้ได้เฉพาะในช่องที่กำหนดเท่านั้น", ephemeral=True)
+    #     else:
+    #         await interaction.response.send_modal(register_modal) #รองรับการกำหนด channel ที่ใช้งานได้
         
 
 
@@ -335,6 +349,27 @@ def run():
         study_plan_embed = StudyPlanEmbed(day.name, start, until, subject)
         await interaction.response.send_message(embed=study_plan_embed.embed, view=study_plan_embed)
 
+    @bot.tree.command(description='View study plan | ดูตารางเรียน')
+    @app_commands.choices(
+        day=[
+            app_commands.Choice(name="📅 ALL days - ทุกวัน", value="8"),
+            app_commands.Choice(name="🔴 Sunday - วันอาทิตย์", value="1"),
+            app_commands.Choice(name="🟡 Monday - วันจันทร์", value="2"), 
+            app_commands.Choice(name="🩷 Tuesday - วันอังคาร", value="3"),
+            app_commands.Choice(name="🟢 Wednesday - วันพุธ", value="4"),
+            app_commands.Choice(name="🟠 Thursday - วันพฤหัสบดี", value="5"),
+            app_commands.Choice(name="🔵 Friday - วันศุกร์", value="6"),
+            app_commands.Choice(name="🟣 Saturday - วันเสาร์", value="7"),
+        ]
+    )
+    @app_commands.describe(day='วันที่ต้องการดูตารางเรียน',share_to='ระบุผู้ใช้ที่ต้องการแชร์ {@user}')
+    async def study_plan_view(interaction: discord.Interaction, day: app_commands.Choice[str], share_to: discord.Member=None):
+        study_plan_embed = StudyPlanEmbed(day.name, "09.00", "18.00", "วิชาการเขียนโปรแกรม")
+        if share_to is not None:
+            await share_to.send(embed=study_plan_embed.embed, view=study_plan_embed)
+            await interaction.response.send_message(f'ได้แชร์ตารางเรียนไปให้ {share_to} แล้ว ✅', ephemeral=True)
+        await interaction.response.send_message(embed=study_plan_embed.embed, view=study_plan_embed, ephemeral=True)
+
 
     #groupwork
     @bot.tree.command(description='Create groupwork | สร้างกลุ่มงาน')
@@ -348,12 +383,97 @@ def run():
 
     #random
     @bot.tree.command(description='Random | การสุ่ม')
-    @app_commands.describe(entries='สิ่งที่ต้องการสุ่ม โดยใช้ช่องว่างเป็นตัวคั่น')
+    @app_commands.describe(entries='Options to randomize using spaces as separators. | สิ่งที่ต้องการสุ่ม โดยใช้ช่องว่างเป็นตัวคั่น')
     async def randoms(interaction: discord.Interaction, entries: str):
         entries_list = entries.split(' ')
         random_result = random.choice(entries_list)
         await interaction.response.send_message(f'ผลลัพธ์ที่ได้คือ {random_result}', ephemeral=True)
     
+
+    #poll
+    @bot.tree.command(name="poll", description="Create a poll (max 5 options) | สร้างโพลล์ (มากสุด 5 ตัวเลือก)")
+    @app_commands.checks.has_permissions(manage_messages=True)
+    @app_commands.describe(question="คุณต้องการจะถามอะไร", option1="ตัวเลือกที่ 1", option2="ตัวเลือกที่ 2", option3="ตัวเลือกที่ 3", option4="ตัวเลือกที่ 4",option5="ตัวเลือกที่ 5", role="mention (role) | คุณจะกล่าวสิ่งนี้กับใคร (บทบาท)")
+    async def poll(interaction: discord.Interaction, question: str, option1: str, option2: str, option3:str=None, option4:str=None, option5:str=None, role:discord.Role=None):
+        await interaction.response.send_message("⌛ กำลังสร้างโพลล์...", ephemeral=True)
+        try:
+            listen = [option1, option2, option3, option4, option5]
+            yonice = []
+            for i in listen:
+                if i != None:
+                    yonice.append(i)
+            if role == None:
+                if len(yonice) == 2:
+                    emb=discord.Embed(color=discord.Colour.blurple(), title=f"📃 {question} 📃", description=f"1️⃣ : {yonice[0]}\n2️⃣ : {yonice[1]}")
+                    emb.set_thumbnail(url='https://cdn.discordapp.com/attachments/1206514380645208104/1206514623445205012/poll.png?ex=65dc494e&is=65c9d44e&hm=1004d12afdc3d8e5604a1de864a78c43ee57eea693cb657e3f2de5c63cb1cc2e&')
+                    msg=await interaction.channel.send(embed=emb)
+                    await msg.add_reaction("1️⃣")
+                    await msg.add_reaction("2️⃣")
+                elif len(yonice) == 3:
+                    emb=discord.Embed(color=discord.Colour.blurple(), title=f"📃 {question} 📃", description=f"1️⃣ : {yonice[0]}\n2️⃣ : {yonice[1]}\n3️⃣ : {yonice[2]}")
+                    emb.set_thumbnail(url='https://cdn.discordapp.com/attachments/1206514380645208104/1206514623445205012/poll.png?ex=65dc494e&is=65c9d44e&hm=1004d12afdc3d8e5604a1de864a78c43ee57eea693cb657e3f2de5c63cb1cc2e&')
+                    msg=await interaction.channel.send(embed=emb)
+                    await msg.add_reaction("1️⃣")
+                    await msg.add_reaction("2️⃣") 
+                    await msg.add_reaction("3️⃣")
+                elif len(yonice) == 4:
+                    emb=discord.Embed(color=discord.Colour.blurple(), title=f"📃 {question} 📃", description=f"1️⃣ : {yonice[0]}\n2️⃣ : {yonice[1]}\n3️⃣ : {yonice[2]}\n4️⃣ : {yonice[3]}")
+                    emb.set_thumbnail(url='https://cdn.discordapp.com/attachments/1206514380645208104/1206514623445205012/poll.png?ex=65dc494e&is=65c9d44e&hm=1004d12afdc3d8e5604a1de864a78c43ee57eea693cb657e3f2de5c63cb1cc2e&')
+                    msg=await interaction.channel.send(embed=emb)
+                    await msg.add_reaction("1️⃣")
+                    await msg.add_reaction("2️⃣") 
+                    await msg.add_reaction("3️⃣")
+                    await msg.add_reaction("4️⃣")
+                elif len(yonice) == 5:
+                    emb=discord.Embed(color=discord.Colour.blurple(), title=f"📃 {question} 📃", description=f"1️⃣ : {yonice[0]}\n2️⃣ : {yonice[1]}\n3️⃣ : {yonice[2]}\n4️⃣ : {yonice[3]}\n5️⃣ : {yonice[4]}")
+                    emb.set_thumbnail(url='https://cdn.discordapp.com/attachments/1206514380645208104/1206514623445205012/poll.png?ex=65dc494e&is=65c9d44e&hm=1004d12afdc3d8e5604a1de864a78c43ee57eea693cb657e3f2de5c63cb1cc2e&')
+                    msg=await interaction.channel.send(embed=emb)
+                    await msg.add_reaction("1️⃣")
+                    await msg.add_reaction("2️⃣") 
+                    await msg.add_reaction("3️⃣")
+                    await msg.add_reaction("4️⃣")
+                    await msg.add_reaction("5️⃣")    
+            else:
+                if len(yonice) == 2 :
+                    emb=discord.Embed(color=discord.Colour.blurple(), title=f"📃 {question} 📃", description=f"1️⃣ : {yonice[0]}\n2️⃣ : {yonice[1]}")
+                    emb.set_thumbnail(url='https://cdn.discordapp.com/attachments/1206514380645208104/1206514623445205012/poll.png?ex=65dc494e&is=65c9d44e&hm=1004d12afdc3d8e5604a1de864a78c43ee57eea693cb657e3f2de5c63cb1cc2e&')
+                    msg=await interaction.channel.send(f"{role.mention}", embed=emb)
+                    await msg.add_reaction("1️⃣")
+                    await msg.add_reaction("2️⃣") 
+                    
+                elif len(yonice) == 3 :
+                    emb=discord.Embed(color=discord.Colour.blurple(), title=f"📃 {question} 📃", description=f"1️⃣ : {yonice[0]}\n2️⃣ : {yonice[1]}\n3️⃣ : {yonice[2]}")
+                    emb.set_thumbnail(url='https://cdn.discordapp.com/attachments/1206514380645208104/1206514623445205012/poll.png?ex=65dc494e&is=65c9d44e&hm=1004d12afdc3d8e5604a1de864a78c43ee57eea693cb657e3f2de5c63cb1cc2e&')
+                    msg=await interaction.channel.send(f"{role.mention}", embed=emb)
+                    await msg.add_reaction("1️⃣")
+                    await msg.add_reaction("2️⃣") 
+                    await msg.add_reaction("3️⃣")
+                    
+                elif len(yonice) == 4:
+                    emb=discord.Embed(color=discord.Colour.blurple(), title=f"📃 {question} 📃", description=f"1️⃣ : {yonice[0]}\n2️⃣ : {yonice[1]}\n3️⃣ : {yonice[2]}\n4️⃣ : {yonice[3]}")
+                    emb.set_thumbnail(url='https://cdn.discordapp.com/attachments/1206514380645208104/1206514623445205012/poll.png?ex=65dc494e&is=65c9d44e&hm=1004d12afdc3d8e5604a1de864a78c43ee57eea693cb657e3f2de5c63cb1cc2e&')
+                    msg=await interaction.channel.send(f"{role.mention}", embed=emb)
+                    await msg.add_reaction("1️⃣")
+                    await msg.add_reaction("2️⃣") 
+                    await msg.add_reaction("3️⃣")
+                    await msg.add_reaction("4️⃣")
+
+                elif len(yonice) == 5:
+                    emb=discord.Embed(color=discord.Colour.blurple(), title=f"📃 {question} 📃", description=f"1️⃣ : {yonice[0]}\n2️⃣ : {yonice[1]}\n3️⃣ : {yonice[2]}\n4️⃣ : {yonice[3]}\n5️⃣ : {yonice[4]}")
+                    emb.set_thumbnail(url='https://cdn.discordapp.com/attachments/1206514380645208104/1206514623445205012/poll.png?ex=65dc494e&is=65c9d44e&hm=1004d12afdc3d8e5604a1de864a78c43ee57eea693cb657e3f2de5c63cb1cc2e&')
+                    msg=await interaction.channel.send(f"{role.mention}", embed=emb)
+                    await msg.add_reaction("1️⃣")
+                    await msg.add_reaction("2️⃣") 
+                    await msg.add_reaction("3️⃣")
+                    await msg.add_reaction("4️⃣")
+                    await msg.add_reaction("5️⃣")
+        
+            await interaction.delete_original_response()
+        except Exception as e:
+            print(e)
+            await interaction.delete_original_response()
+            await interaction.followup.send("An error occured, try again later.", ephemeral=True)
+
 
     #delete commands unused
     @bot.command(name='deletecommands', aliases=['clear'])
