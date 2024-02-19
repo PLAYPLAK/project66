@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class UP</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+    <style>
+        .set1 {
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark sticky-top d-flex align-items-center">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">Class Up</a>
+            
+            {% if current_user %}
+            <ul class="nav">
+            <li class="nav-item">
+                <a href="#">
+                <button type="button" class="btn">
+                    <img src="{{current_user.avatar_url}}" class="rounded-circle"
+                    height="28" alt="">
+                </button>
+                </a> 
+            </li>
+            <li class="nav-item">
+                <a href="/logout"><button type="button" class="btn btn-danger">Log Out</button></a>
+            </li>
+            </ul>
+            {% else %}
+
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container text-center" style="padding-top: 100px;"> 
+        <div class="row ">
+            {% for guild in current_guild %}
+            <div class="col-4 card">
+                
+                <div class="row">
+                    <div class="col d-flex align-items-center">
+                      <img src="{{guild.icon_url}}" class="img-thumbnail" alt="..." style="width: 100px;height: 100px;">  
+                    </div>
+                    <div class="col d-flex align-items-center">
+                        <h5>{{guild.name}}</h5>
+                    </div>
+                </div>
+                
+                <div class="row set1">
+                    <a href="/manage/{{guild.id}}/setting"><button class="btn btn-primary" type="button" style="width: 400px;">ตั้งค่า Bot</button></a>
+                </div>
+                <div class="row set1">
+                    <a href="/manage/{{guild.id}}/db"><button class="btn btn-primary" type="button" style="width: 400px;">ตั้งค่า ฐานข้อมูล</button></a>
+                </div>
+                <div class="row set1">
+                    <a href="/manage/{{guild.id}}/table"><button class="btn btn-primary" type="button" style="width: 400px;">ตั้งค่า จัดจารางเรียน</button></a>
+                </div>
+                <div class="row set1">
+                    <a href="/manage/{{guild.id}}/function"><button class="btn btn-primary" type="button" style="width: 400px; " disabled>ตั้งค่า Function</button></a>
+                </div>
+            </div>  
+            {% endfor %}
+
+            <div class="col-8 card">
+
+                <div id="from1" class="form-container active">
+                    <form action="#">
+                        <div class="row">
+                            <!--ลงทะเบียน-->
+                            <div class="col" style="padding: 10px;">
+                                <label class="form-label">ตั้งค่า Function</label>
+                                <label for="register" class="form-label">/register</label>
+                                <select class="form-select" id="register" name="register" required onchange="showDiv()">
+                                    <option selected value="2">ทุกช่องที่สามารถโต้ตอบได้</option>
+                                    <option value="3">โต้ตอบได้แค่บางช่องเท่านั้น</option>
+                                </select>
+
+                                <div id="select-1" style="display: none; padding: 20px;">
+                                    <label for="selecterfrom" class="form-label">กรุณาระบุ ช่องแชทที่ต้องการโต้ตอบ</label>
+                                    {% for channel in channels %}
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" name="register_channels" type="checkbox" role="switch" id="{{channel.id}}" value="{{channel.id}}">
+                                        <label class="form-check-label" for="{{channel.id}}">{{channel.name}}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <!--จบลงทะเบียน-->
+                        </div>
+
+                        <div class="row">
+                            <div class="col" style="padding: 10px;">
+                                <label class="form-label">ตั้งค่า Function</label>
+                                <label for="profile" class="form-label">/profile</label>
+                                <select class="form-select" id="profile" name="profile" required onchange="showDiv2()">
+                                    <option selected value="2">ทุกช่องที่สามารถโต้ตอบได้</option>
+                                    <option value="3">โต้ตอบได้แค่บางช่องเท่านั้น</option>
+                                </select>
+
+                                <div id="select-2" style="display: none; padding: 20px;">
+                                    <label for="selecterfrom" class="form-label">กรุณาระบุ ช่องแชทที่ต้องการโต้ตอบ</label>
+                                    {% for channel in channels %}
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" name="profile_channels" type="checkbox" role="switch" id="{{channel.id}}" value="{{channel.id}}">
+                                        <label class="form-check-label" for="{{channel.id}}">{{channel.name}}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col" style="padding: 10px;">
+                                <label class="form-label">ตั้งค่า Function</label>
+                                <label for="study_plan_edit" class="form-label">/study_plan_edit</label>
+                                <select class="form-select" id="study_plan_edit" name="study_plan_edit" required onchange="showDiv3()">
+                                    <option selected value="2">ทุกช่องที่สามารถโต้ตอบได้</option>
+                                    <option value="3">โต้ตอบได้แค่บางช่องเท่านั้น</option>
+                                </select>
+
+                                <div id="select-3" style="display: none; padding: 20px;">
+                                    <label for="selecterfrom" class="form-label">กรุณาระบุ ช่องแชทที่ต้องการโต้ตอบ</label>
+                                    {% for channel in channels %}
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" name="plan_edit_channels" type="checkbox" role="switch" id="{{channel.id}}" value="{{channel.id}}">
+                                        <label class="form-check-label" for="{{channel.id}}">{{channel.name}}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col" style="padding: 10px;">
+                                <label class="form-label">ตั้งค่า Function</label>
+                                <label for="study_plan_view" class="form-label">/study_plan_view</label>
+                                <select class="form-select" id="study_plan_view" name="study_plan_view" required onchange="showDiv4()">
+                                    <option selected value="2">ทุกช่องที่สามารถโต้ตอบได้</option>                                    
+                                    <option value="3">โต้ตอบได้แค่บางช่องเท่านั้น</option>
+                                </select>
+
+                                <div id="select-4" style="display: none; padding: 20px;">
+                                    <label for="selecterfrom" class="form-label">กรุณาระบุ ช่องแชทที่ต้องการโต้ตอบ</label>
+                                    {% for channel in channels %}
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" name="plan_view_channels" type="checkbox" role="switch" id="{{channel.id}}" value="{{channel.id}}">
+                                        <label class="form-check-label" for="{{channel.id}}">{{channel.name}}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col" style="padding: 10px;">
+                                <label class="form-label">ตั้งค่า Function</label>
+                                <label for="groupwork" class="form-label">/groupwork</label>
+                                <select class="form-select" id="groupwork" name="groupwork" required onchange="showDiv5()">
+                                    <option selected value="2">ทุกช่องที่สามารถโต้ตอบได้</option>
+                                    <option value="3">โต้ตอบได้แค่บางช่องเท่านั้น</option>
+                                </select>
+
+                                <div id="select-5" style="display: none; padding: 20px;">
+                                    <label for="selecterfrom" class="form-label">กรุณาระบุ ช่องแชทที่ต้องการโต้ตอบ</label>
+                                    {% for channel in channels %}
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" name="groupwork_channels" type="checkbox" role="switch" id="{{channel.id}}" value="{{channel.id}}">
+                                        <label class="form-check-label" for="{{channel.id}}">{{channel.name}}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col" style="padding: 10px;">
+                                <label class="form-label">ตั้งค่า Function</label>
+                                <label for="random" class="form-label">/random</label>
+                                <select class="form-select" id="random" name="random" required onchange="showDiv6()">
+                                    <option selected value="2">ทุกช่องที่สามารถโต้ตอบได้</option>
+                                    <option value="3">โต้ตอบได้แค่บางช่องเท่านั้น</option>
+                                </select>
+
+                                <div id="select-6" style="display: none; padding: 20px;">
+                                    <label for="selecterfrom" class="form-label">กรุณาระบุ ช่องแชทที่ต้องการโต้ตอบ</label>
+                                    {% for channel in channels %}
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" name="random_channels" type="checkbox" role="switch" id="{{channel.id}}" value="{{channel.id}}">
+                                        <label class="form-check-label" for="{{channel.id}}">{{channel.name}}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col" style="padding: 10px;">
+                                <label for="validationServerUsername" class="form-label">ตั้งค่า Function</label>
+                                <label for="poll" class="form-label">/poll</label>
+                                <select class="form-select" id="poll" name="poll" onchange="showDiv7()">
+                                    <option selected value="2">ทุกช่องที่สามารถโต้ตอบได้</option>                                    
+                                    <option value="3">โต้ตอบได้แค่บางช่องเท่านั้น</option>
+                                </select>
+
+                                <div id="select-6" style="display: none; padding: 20px;">
+                                    <label for="selecterfrom" class="form-label">กรุณาระบุ ช่องแชทที่ต้องการโต้ตอบ</label>
+                                    {% for channel in channels %}
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" name="poll_channels" type="checkbox" role="switch" id="{{channel.id}}" value="{{channel.id}}">
+                                        <label class="form-check-label" for="{{channel.id}}">{{channel.name}}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+
+                                <button class="btn btn-primary" type="button" style="width: 150px; margin-top: 10px;">ตกลง</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+            
+        </div>
+    </div>
+    <script>
+        function showDiv() {
+            var selectedValue = document.getElementById('register').value;
+
+            // Hide all divs
+            document.querySelectorAll('[id^="select-"]').forEach(function (div) {
+                div.style.display = 'none';
+            });
+
+            // Show the selected div
+            if (selectedValue === '3') {
+                document.getElementById('select-1').style.display = 'block';
+            }
+            // Add more conditions for other values as needed
+        }
+        function showDiv2() {
+            var selectedValue = document.getElementById('profile').value;
+
+            // Hide all divs
+            document.querySelectorAll('[id^="select-"]').forEach(function (div) {
+                div.style.display = 'none';
+            });
+
+            // Show the selected div
+            if (selectedValue === '3') {
+                document.getElementById('select-2').style.display = 'block';
+            }
+            // Add more conditions for other values as needed
+        }
+        function showDiv3() {
+            var selectedValue = document.getElementById('study_plan_edit').value;
+
+            // Hide all divs
+            document.querySelectorAll('[id^="select-"]').forEach(function (div) {
+                div.style.display = 'none';
+            });
+
+            // Show the selected div
+            if (selectedValue === '3') {
+                document.getElementById('select-3').style.display = 'block';
+            }
+            // Add more conditions for other values as needed
+        }
+        function showDiv4() {
+            var selectedValue = document.getElementById('study_plan_view').value;
+
+            // Hide all divs
+            document.querySelectorAll('[id^="select-"]').forEach(function (div) {
+                div.style.display = 'none';
+            });
+
+            // Show the selected div
+            if (selectedValue === '3') {
+                document.getElementById('select-4').style.display = 'block';
+            }
+            // Add more conditions for other values as needed
+        }
+        function showDiv5() {
+            var selectedValue = document.getElementById('groupwork').value;
+
+            // Hide all divs
+            document.querySelectorAll('[id^="select-"]').forEach(function (div) {
+                div.style.display = 'none';
+            });
+
+            // Show the selected div
+            if (selectedValue === '3') {
+                document.getElementById('select-5').style.display = 'block';
+            }
+            // Add more conditions for other values as needed
+        }
+        function showDiv6() {
+            var selectedValue = document.getElementById('random').value;
+
+            // Hide all divs
+            document.querySelectorAll('[id^="select-"]').forEach(function (div) {
+                div.style.display = 'none';
+            });
+
+            // Show the selected div
+            if (selectedValue === '3') {
+                document.getElementById('select-6').style.display = 'block';
+            }
+            // Add more conditions for other values as needed
+        }
+        function showDiv7() {
+            var selectedValue = document.getElementById('poll').value;
+
+            // Hide all divs
+            document.querySelectorAll('[id^="select-"]').forEach(function (div) {
+                div.style.display = 'none';
+            });
+
+            // Show the selected div
+            if (selectedValue === '3') {
+                document.getElementById('select-7').style.display = 'block';
+            }
+            // Add more conditions for other values as needed
+        }
+    </script>
+</body>
+</html>
