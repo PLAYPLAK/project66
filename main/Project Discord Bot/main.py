@@ -294,6 +294,28 @@ def run():
 
         print(colors.YELLOW + '...................Bot is working Press Ctrl+c for stop Bot...................' + colors.RESET)
 
+#on_messages conditions
+    @bot.event
+    async def on_message(message):
+        if message.author == bot.user:  # ไม่ต้องตอบกลับถ้าข้อความเป็นของบอทเอง
+            return
+
+        # คำที่ต้องการค้นหา
+        target_words = ["gg", "Hello", "Goodbye"]
+
+        # ตรวจสอบว่าข้อความใน target_words ปรากฏในข้อความหรือไม่
+        for word in target_words:
+            if word in message.content:
+                await message.channel.send("Found target word: " + word)
+
+        if "GG" in message.content:  # ตรวจสอบว่ามีคำว่า "GG" ในข้อความหรือไม่
+            await message.channel.send("EZ")  # ส่งข้อความ "EZ" กลับไปในช่องเดิมที่ข้อความถูกส่งมา
+
+        if message.content == "EZ":  # ตรวจสอบว่าข้อความเป็น "EZ" แบบตรงตัวเท่านั้น
+            await message.channel.send("EZ")
+
+        await bot.process_commands(message)  # ตรวจสอบว่าข้อความเป็นคำสั่งหรือไม่ และประมวลผลต่อไป
+
 #function update bot data
     async def update_bot():
         list(bot)
@@ -303,7 +325,7 @@ def run():
     @bot.tree.context_menu(name="View Profile")
     async def get_profile(interaction: discord.Interaction, of : discord.Member):
         view = ProfileView(of)
-        await update_bot #อัพเดทข้อมูลบอท
+        # await update_bot #อัพเดทข้อมูลบอท
         await interaction.response.send_message(embed=view.embed, view=view, ephemeral=True)
     
 
@@ -446,7 +468,7 @@ def run():
     @app_commands.describe(question="คุณต้องการจะถามอะไร", option1="ตัวเลือกที่ 1", option2="ตัวเลือกที่ 2", option3="ตัวเลือกที่ 3", option4="ตัวเลือกที่ 4",option5="ตัวเลือกที่ 5", role="mention (role) | คุณจะกล่าวสิ่งนี้กับใคร (บทบาท)")
     async def poll(interaction: discord.Interaction, question: str, option1: str, option2: str, option3:str=None, option4:str=None, option5:str=None, role:discord.Role=None):
 
-        FEEDBACK_CH = [1187345770400194654] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
+        FEEDBACK_CH = [] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
         valid_channel = interaction.channel_id in FEEDBACK_CH
 
         if not valid_channel and FEEDBACK_CH:
