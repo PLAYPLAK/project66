@@ -42,16 +42,18 @@ class RegisterModal(discord.ui.Modal, title='Register'):
     std_id = discord.ui.TextInput(label='Student ID', placeholder='ex: 64XXXXXX', style=discord.TextStyle.short, max_length=8)
     name_th = discord.ui.TextInput(label='ชื่อ - สกุล', placeholder='ex: สมชาย ใจดี', style=discord.TextStyle.short, max_length=100)
     name_en = discord.ui.TextInput(label='Full Name', placeholder='ex: Somchai Jaidee', style=discord.TextStyle.short, max_length=100)
-    tel_num = discord.ui.TextInput(label='เบอร์โทรศัพท์ (ไม่จำเป็น)', placeholder='ex: 08XXXXXXXX', style=discord.TextStyle.short, max_length=10, required=False)
-    e_mail = discord.ui.TextInput(label='E-mail  (ไม่จำเป็น)', placeholder='ex: example@gmail.com', style=discord.TextStyle.short, max_length=100, required=False)
+    tel_num = discord.ui.TextInput(label='เบอร์โทรศัพท์ (ไม่จำเป็น)', placeholder='ex: 08XXXXXXXX', style=discord.TextStyle.short, max_length=10, default='-', required=False)
+    e_mail = discord.ui.TextInput(label='E-mail  (ไม่จำเป็น)', placeholder='ex: example@gmail.com', style=discord.TextStyle.short, max_length=100, default='-', required=False)
     async def on_submit(self, interaction : discord.Interaction):
 
         channel = interaction.guild.get_channel(settings.FEEDBACK_CH) #ดึงช่องที่ต้องการส่งข้อความ
-        db.register_user( self.std_id.value, self.name_th.value, self.name_en.value, interaction.user.id, self.tel_num.value, self.e_mail.value)
+
+
+        # db.register_user( self.std_id.value, self.name_th.value, self.name_en.value, interaction.user.id, self.tel_num.value, self.e_mail.value)
         
         embed1 = discord.Embed(
-            title="Register success!!",
-            description="**โปรดตรวจสอบความถูกต้องของข้อมูล\nหากข้อมูลไม่ถูกต้อง กรุณาใช้คำสั่ง /register ใหม่อีกครั้ง**",
+            title="✅ Register success!!",
+            description="\n⚠️ โปรดตรวจสอบความถูกต้องของข้อมูล ⚠️\nหากข้อมูลไม่ถูกต้อง กรุณาใช้คำสั่ง **/register** ใหม่อีกครั้ง\n",
             color=discord.Color.green()
         )
         embed1.add_field(
@@ -66,20 +68,20 @@ class RegisterModal(discord.ui.Modal, title='Register'):
         embed1.add_field(
             name=f'{self.name_en.label}',
             value=f'{self.name_en.value}',
-            inline=False
+            # inline=False
         )
         embed1.add_field(
-            name=f'{self.tel_num.label}',
+            name=f'เบอร์โทรศัพท์',
             value=f'{self.tel_num.value}',
             inline=False
         )
         embed1.add_field(
-            name=f'{self.e_mail.label}',
+            name=f'E-mail',
             value=f'{self.e_mail.value}',
             inline=False
         )       
         embed1.set_thumbnail(url=self.user.avatar) #รูปโปรไฟล์
-        embed1.set_author(name=self.user.display_name) #ชื่อผู้ใช้
+        # embed1.set_author(name=self.user.display_name) #ชื่อผู้ใช้
 
         #ดึงไอดีของผู้ใช้ในเซิฟเวอร์
         guild = interaction.guild
@@ -87,10 +89,16 @@ class RegisterModal(discord.ui.Modal, title='Register'):
 
         role_id_1 = 1136919900816945232  # กำหนด id ของ role
 
+        if role_id_1 == None:
+            await interaction.response.send_message('โปรดกำหนด role ที่จะมอบ', ephemeral=True)
+            return
+
         # ดึง role ที่ต้องการจะกำหนด
         role_1 = discord.utils.get(guild.roles, id=role_id_1)
+
+        if role_1 not in member.roles: #ตรวจสอบว่าผู้ใช้มี role นี้หรือยัง
         
-        await member.add_roles(role_1) #กำหนด role ให้กับผู้ใช้
+            await member.add_roles(role_1) #กำหนด role ให้กับผู้ใช้
         
         std_email = (f'{self.std_id.value}@kmitl.ac.th') #เมลนักศึกษา
 
@@ -132,16 +140,30 @@ class GroupworkView(discord.ui.View):
         self.update_embed()
 
 
+    # def update_embed(self):
+    #     self.embed.remove_field(0)
+    #     member_list_with_numbers = [f"{index + 1}. {self.member[index]}" for index in range(len(self.member))]
+    #     self.embed.add_field(
+    #         name='👤 รายชื่อสมาชิก',
+    #         # value='\n'.join(f"{self.member[item]}" for item in range(len(self.member))),
+    #         value='\n'.join(member_list_with_numbers),
+    #         inline=False
+    #     )    
+    
     def update_embed(self):
         self.embed.remove_field(0)
-        member_list_with_numbers = [f"{index + 1}. {self.member[index]}" for index in range(len(self.member))]
+        member_list_with_numbers = []
+
+        for index, member_id in enumerate(self.member):
+            profile_th = db.profile(member_id, 'TH')
+            member_list_with_numbers.append(f"{index + 1}. {profile_th}")
+
         self.embed.add_field(
             name='👤 รายชื่อสมาชิก',
-            # value='\n'.join(f"{self.member[item]}" for item in range(len(self.member))),
             value='\n'.join(member_list_with_numbers),
             inline=False
-        )    
-        
+        )
+
 
     @discord.ui.button(label='Join', style=discord.ButtonStyle.green)
     async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -212,23 +234,23 @@ class ProfileView(discord.ui.View):
         
         self.embed = discord.Embed(
             title='Profile',
-            description=f"Name : {db.profile(12345678,'TH')}"+
+            description=f"Name : {db.profile(of.id,'TH')}"+
                         f"\nUsername : {of.name}",
             color=discord.Color.green(),
         )
         self.embed.add_field(
             name='ID',
-            value=f"{db.profile(12345678,'ID')}",
+            value=f"{db.profile(of.id,'ID')}",
             inline=False
         )
         self.embed.add_field(
             name='E-mail',
-            value=f"{db.profile(12345678,'Email')}",
+            value=f"{db.profile(of.id,'Email')}",
             inline=False
         )
         self.embed.add_field(
             name='Tel.',
-            value=f"{db.profile(12345678,'Phone')}",
+            value=f"{db.profile(of.id,'Phone')}",
             inline=False
         )
         
@@ -413,6 +435,8 @@ def run():
 
         FEEDBACK_CH = [] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
         await feedback(interaction, FEEDBACK_CH)
+
+        db.study_plan(day.name, start, until, subject, interaction.user.id, day.value)
 
         study_plan_embed = StudyPlanEmbed(day.name, start, until, subject)
         await interaction.response.send_message(embed=study_plan_embed.embed, view=study_plan_embed)
