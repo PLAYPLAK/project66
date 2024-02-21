@@ -4,7 +4,7 @@ from typing import Any
 from discord.interactions import Interaction
 import settings
 import discord
-import aiosqlite
+# import aiosqlite
 import traceback
 # import utils
 import typing
@@ -47,7 +47,7 @@ class RegisterModal(discord.ui.Modal, title='Register'):
     async def on_submit(self, interaction : discord.Interaction):
 
         channel = interaction.guild.get_channel(settings.FEEDBACK_CH) #ดึงช่องที่ต้องการส่งข้อความ
-
+        db.register_user( self.std_id.value, self.name_th.value, self.name_en.value, interaction.user.id, self.tel_num.value, self.e_mail.value)
         
         embed1 = discord.Embed(
             title="Register success!!",
@@ -85,7 +85,7 @@ class RegisterModal(discord.ui.Modal, title='Register'):
         guild = interaction.guild
         member = guild.get_member(interaction.user.id)
 
-        role_id_1 = 1203950522952851526  # กำหนด id ของ role
+        role_id_1 = 1136919900816945232  # กำหนด id ของ role
 
         # ดึง role ที่ต้องการจะกำหนด
         role_1 = discord.utils.get(guild.roles, id=role_id_1)
@@ -212,23 +212,23 @@ class ProfileView(discord.ui.View):
         
         self.embed = discord.Embed(
             title='Profile',
-            description=f"Name : {db.profile(of.id,"TH")}"+
+            description=f"Name : {db.profile(12345678,'TH')}"+
                         f"\nUsername : {of.name}",
             color=discord.Color.green(),
         )
         self.embed.add_field(
             name='ID',
-            value=f'{db.profile(of.id,"ID")}',
+            value=f"{db.profile(12345678,'ID')}",
             inline=False
         )
         self.embed.add_field(
             name='E-mail',
-            value=f'{db.profile(of.id,"Email")}',
+            value=f"{db.profile(12345678,'Email')}",
             inline=False
         )
         self.embed.add_field(
             name='Tel.',
-            value=f'{db.profile(of.id,"Phone")}',
+            value=f"{db.profile(12345678,'Phone')}",
             inline=False
         )
         
