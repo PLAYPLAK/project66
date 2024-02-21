@@ -12,7 +12,9 @@ import enum
 from datetime import datetime
 from discord.ext import commands
 from discord import app_commands
+from database import Database
 
+db = Database()
 
 
 logger = settings.logging.getLogger("bot")
@@ -209,21 +211,27 @@ class ProfileView(discord.ui.View):
         super().__init__()
         
         self.embed = discord.Embed(
-            title=f'Profile',
-            description=f"Name : {of.display_name}"+
+            title='Profile',
+            description=f"Name : {db.profile(of.id,"TH")}"+
                         f"\nUsername : {of.name}",
             color=discord.Color.green(),
         )
         self.embed.add_field(
             name='ID',
-            value=f'{of.id}',
+            value=f'{db.profile(of.id,"ID")}',
             inline=False
         )
-        # self.embed.add_field(
-        #     name='E-mail',
-        #     value=f'{of.display_name}@gmail.com',
-        #     inline=False
-        # )
+        self.embed.add_field(
+            name='E-mail',
+            value=f'{db.profile(of.id,"Email")}',
+            inline=False
+        )
+        self.embed.add_field(
+            name='Tel.',
+            value=f'{db.profile(of.id,"Phone")}',
+            inline=False
+        )
+        
         self.embed.set_thumbnail(url=of.avatar)
 
     async def on_timeout(self):
@@ -320,6 +328,23 @@ def run():
     async def update_bot():
         list(bot)
 
+#Feedback_channel
+    async def feedback(interaction : discord.Interaction, channel : list=None):
+        FEEDBACK_CH = channel
+        valid_channel = interaction.channel_id in FEEDBACK_CH
+
+        if not valid_channel and FEEDBACK_CH:
+            await interaction.response.send_message('คำสั่งนี้สามารถใช้ได้เฉพาะในช่องที่กำหนดเท่านั้น', ephemeral=True)
+            return
+
+#check permission role
+    async def has_permissions(interaction: discord.Interaction):
+        role_id = 1136919900816945232
+        guild = interaction.guild
+        member = guild.get_member(interaction.user.id)
+        role = guild.get_role(role_id)
+        return role in member.roles
+
 #context menu zone
 
     @bot.tree.context_menu(name="View Profile")
@@ -335,11 +360,7 @@ def run():
     @bot.tree.command(description='Register for New member | ลงทะเบียนสำหรับสมาชิกใหม่') 
     async def register(interaction: discord.Interaction):
         FEEDBACK_CH = [1187345770400194654] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
-        valid_channel = interaction.channel_id in FEEDBACK_CH
-
-        if not valid_channel and FEEDBACK_CH:
-            await interaction.response.send_message("คำสั่งนี้สามารถใช้ได้เฉพาะในช่องที่กำหนดเท่านั้น", ephemeral=True)
-            return
+        await feedback(interaction, FEEDBACK_CH)
 
         register_modal = RegisterModal()
         register_modal.user = interaction.user
@@ -360,12 +381,15 @@ def run():
     @bot.tree.command(description='View profile | ดูโปรไฟล์ของผู้ใช้')
     @app_commands.describe(of='ดูโปรไฟล์ของผู้ใช้ที่กำหนด')
     async def profile(interaction: discord.Interaction, of: discord.Member):
-        FEEDBACK_CH = [] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
-        valid_channel = interaction.channel_id in FEEDBACK_CH
+        FEEDBACK_CH = []
+        await feedback(interaction, FEEDBACK_CH)
 
-        if not valid_channel and FEEDBACK_CH:
-            await interaction.response.send_message("คำสั่งนี้สามารถใช้ได้เฉพาะในช่องที่กำหนดเท่านั้น", ephemeral=True)
-            return
+        # FEEDBACK_CH = [] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
+        # valid_channel = interaction.channel_id in FEEDBACK_CH
+
+        # if not valid_channel and FEEDBACK_CH:
+        #     await interaction.response.send_message("คำสั่งนี้สามารถใช้ได้เฉพาะในช่องที่กำหนดเท่านั้น", ephemeral=True)
+        #     return
         
         view = ProfileView(of) #ส่งข้อมูลตัวแปรเข้าตัวทำงานหลัก
         await interaction.response.send_message(embed=view.embed, view=view, ephemeral=True) #แสดง embed ที่อยู่ใน ProfileView พร้อมส่ง of ไปด้วย
@@ -388,11 +412,7 @@ def run():
     async def study_plan_edit(interaction: discord.Interaction, day: app_commands.Choice[str], start: str, until: str, subject: str):
 
         FEEDBACK_CH = [] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
-        valid_channel = interaction.channel_id in FEEDBACK_CH
-
-        if not valid_channel and FEEDBACK_CH:
-            await interaction.response.send_message("คำสั่งนี้สามารถใช้ได้เฉพาะในช่องที่กำหนดเท่านั้น", ephemeral=True)
-            return
+        await feedback(interaction, FEEDBACK_CH)
 
         study_plan_embed = StudyPlanEmbed(day.name, start, until, subject)
         await interaction.response.send_message(embed=study_plan_embed.embed, view=study_plan_embed)
@@ -415,11 +435,7 @@ def run():
         study_plan_embed = StudyPlanEmbed(day.name, "09.00", "18.00", "วิชาการเขียนโปรแกรม")
 
         FEEDBACK_CH = [] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
-        valid_channel = interaction.channel_id in FEEDBACK_CH
-
-        if not valid_channel and FEEDBACK_CH:
-            await interaction.response.send_message("คำสั่งนี้สามารถใช้ได้เฉพาะในช่องที่กำหนดเท่านั้น", ephemeral=True)
-            return
+        await feedback(interaction, FEEDBACK_CH)
 
         if share_to is not None:
             await share_to.send(embed=study_plan_embed.embed, view=study_plan_embed)
@@ -434,11 +450,7 @@ def run():
         # print(interaction.user.display_name)
 
         FEEDBACK_CH = [] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
-        valid_channel = interaction.channel_id in FEEDBACK_CH
-
-        if not valid_channel and FEEDBACK_CH:
-            await interaction.response.send_message("คำสั่งนี้สามารถใช้ได้เฉพาะในช่องที่กำหนดเท่านั้น", ephemeral=True)
-            return
+        await feedback(interaction, FEEDBACK_CH)
 
         initial_member = [interaction.user.display_name]
         view = GroupworkView(topic, descriptions, member_amount, initial_member)
@@ -451,11 +463,7 @@ def run():
     async def randoms(interaction: discord.Interaction, entries: str):
 
         FEEDBACK_CH = [] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
-        valid_channel = interaction.channel_id in FEEDBACK_CH
-
-        if not valid_channel and FEEDBACK_CH:
-            await interaction.response.send_message("คำสั่งนี้สามารถใช้ได้เฉพาะในช่องที่กำหนดเท่านั้น", ephemeral=True)
-            return
+        await feedback(interaction, FEEDBACK_CH)
 
         entries_list = entries.split(' ')
         random_result = random.choice(entries_list)
@@ -469,11 +477,7 @@ def run():
     async def poll(interaction: discord.Interaction, question: str, option1: str, option2: str, option3:str=None, option4:str=None, option5:str=None, role:discord.Role=None):
 
         FEEDBACK_CH = [] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
-        valid_channel = interaction.channel_id in FEEDBACK_CH
-
-        if not valid_channel and FEEDBACK_CH:
-            await interaction.response.send_message("คำสั่งนี้สามารถใช้ได้เฉพาะในช่องที่กำหนดเท่านั้น", ephemeral=True)
-            return
+        await feedback(interaction, FEEDBACK_CH)
 
         await interaction.response.send_message("⌛ กำลังสร้างโพลล์...", ephemeral=True)
         try:
