@@ -12,12 +12,31 @@ import enum
 from datetime import datetime
 from discord.ext import commands
 from discord import app_commands
-from database import Database
+import ast
+# from database import Database
 
-db = Database()
+# db = Database()
 
 
 logger = settings.logging.getLogger("bot")
+
+
+
+def have_permission():
+    async def predicate(interaction: discord.Interaction):
+        role_id = 0  # กำหนด id ของ role, None = 0
+        guild = interaction.guild
+        member = guild.get_member(interaction.user.id)
+        
+        if role_id == 0:
+            role = guild.default_role  # ใช้ role ที่กำหนดเป็น default (everyone)
+        else:
+            role = guild.get_role(role_id)
+
+        return role in member.roles
+
+    return app_commands.check(predicate)
+
 
 class colors:
     RESET = '\033[0m'
@@ -87,10 +106,10 @@ class RegisterModal(discord.ui.Modal, title='Register'):
         guild = interaction.guild
         member = guild.get_member(interaction.user.id)
 
-        role_id_1 = 1136919900816945232  # กำหนด id ของ role
+        role_id_1 = 0  # กำหนด id ของ role
 
-        if role_id_1 == None:
-            await interaction.response.send_message('โปรดกำหนด role ที่จะมอบ', ephemeral=True)
+        if role_id_1 == 0:
+            await interaction.response.send_message('ผู้ดูแลยังไม่ได้กำหนด role ที่จะมอบให้ผู้ใช้งาน', ephemeral=True)
             return
 
         # ดึง role ที่ต้องการจะกำหนด
@@ -140,37 +159,25 @@ class GroupworkView(discord.ui.View):
         self.update_embed()
 
 
-    # def update_embed(self):
-    #     self.embed.remove_field(0)
-    #     member_list_with_numbers = [f"{index + 1}. {self.member[index]}" for index in range(len(self.member))]
-    #     self.embed.add_field(
-    #         name='👤 รายชื่อสมาชิก',
-    #         # value='\n'.join(f"{self.member[item]}" for item in range(len(self.member))),
-    #         value='\n'.join(member_list_with_numbers),
-    #         inline=False
-    #     )    
-    
     def update_embed(self):
         self.embed.remove_field(0)
-        member_list_with_numbers = []
-
-        for index, member_id in enumerate(self.member):
-            profile_th = db.profile(member_id, 'TH')
-            member_list_with_numbers.append(f"{index + 1}. {profile_th}")
-
+        member_list_with_numbers = [f"{index + 1}. {self.member[index]}" for index in range(len(self.member))]
         self.embed.add_field(
             name='👤 รายชื่อสมาชิก',
+            # value='\n'.join(f"{self.member[item]}" for item in range(len(self.member))),
             value='\n'.join(member_list_with_numbers),
             inline=False
-        )
-
+        )    
+    
+    
 
     @discord.ui.button(label='Join', style=discord.ButtonStyle.green)
+    @have_permission()
     async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
         new_member_name = str(interaction.user.display_name)
 
         # ตรวจสอบว่า new_member_name อยู่ใน self.member หรือไม่
-        if new_member_name not in self.member:
+        if new_member_name not in self.member :
             self.member.append(new_member_name)
 
             if self.remaining > 0:
@@ -178,6 +185,7 @@ class GroupworkView(discord.ui.View):
                 testg.update_embed()
                 await interaction.response.edit_message(embed=testg.embed, view=testg)
             else:
+                del self.member[-1]
                 button.disabled = True
                 await interaction.response.edit_message(embed=self.embed, view=self)
 
@@ -193,6 +201,7 @@ class GroupworkView(discord.ui.View):
 
 
     @discord.ui.button(label='Leave', style=discord.ButtonStyle.red)
+    @have_permission()
     async def leave(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.sub > 0:
             button.disabled = False
@@ -227,6 +236,31 @@ class StudyPlanEmbed(discord.ui.View):
             inline=False
         )       
 
+class StudyPlanView(discord.ui.View):
+    def __init__(self, user_id : int,  day_value: int):
+        super().__init__()
+
+        if day_value == 8:
+            result = db.study_plan_view(user_id, day_value)
+
+        else:
+            day, times, subject, day_num = db.study_plan_view(user_id, day_value)
+            time = [ast.literal_eval(time_range) for time_range in times]
+
+            value_string = ''
+            for i in range(len(day)):
+                value_string += f'   {time[i][0]} น. - {time[i][1]} น. | {subject[i]}\n'
+
+            self.embed = discord.Embed(
+                title='Study Plan',
+                description="รายละเอียด",
+                color=discord.Color.green(),
+            )
+            self.embed.add_field(
+                name= day[0],
+                value= value_string,
+                inline= False
+            )
 
 class ProfileView(discord.ui.View):
     def __init__(self, of: discord.Member):
@@ -260,8 +294,37 @@ class ProfileView(discord.ui.View):
         # Cleanup logic if needed
         pass
    
+class ProfileView2(discord.ui.View):
+    def __init__(self, of: discord.Member):
+        super().__init__()
+        
+        self.embed = discord.Embed(
+            title='Profile',
+            description=f"ชื่อ-สกุล : ปิยะโรจน์ ขันธิฉัตร์"+
+                        f"\nFullname : Piyarot Khantichat",
+            color=discord.Color.green(),
+        )
+        self.embed.add_field(
+            name='Student ID',
+            value=f"64015087",
+            inline=False
+        )
+        self.embed.add_field(
+            name='E-mail',
+            value=f"piyarot.ongkillz@gmail.com",
+            inline=False
+        )
+        self.embed.add_field(
+            name='Tel.',
+            value=f"-",
+            inline=False
+        )
+        
+        self.embed.set_thumbnail(url=of.avatar)
 
-
+    async def on_timeout(self):
+        # Cleanup logic if needed
+        pass
 
 def run():
     intents = discord.Intents.all()
@@ -279,7 +342,7 @@ def run():
         for guild in bot.guilds:
             logger.info(f'Guild Name: {guild.name} (ID: {guild.id})')
 
-        await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.playing, name="Discord"))#สถานะของบอท
+        await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="Discord server"))#สถานะของบอท
         print(colors.GREEN + '.'*32 +'Bot is started' + '.'*32 + colors.RESET)
        
         #load cogs
@@ -314,13 +377,6 @@ def run():
         await bot.tree.sync(guild=settings.GUILDS_ID)
             
 
-        #connect database
-        # bot.db = await aiosqlite.connect('Main.db')
-        # c = await bot.db.cursor()
-        # await c.execute("CREATE TABLE IF NOT EXISTS users(user_id INTEGER)")
-        # await bot.db.commit()
-
-        # print(list(bot.guilds))
 
         print(colors.YELLOW + '...................Bot is working Press Ctrl+c for stop Bot...................' + colors.RESET)
 
@@ -330,21 +386,39 @@ def run():
         if message.author == bot.user:  # ไม่ต้องตอบกลับถ้าข้อความเป็นของบอทเอง
             return
 
-        # คำที่ต้องการค้นหา
-        target_words = ["gg", "Hello", "Goodbye"]
+        question = db.get_question()  # ดึงคำถามจากฐานข้อมูล
+        answer = db.get_answer()  # ดึงคำตอบจากฐานข้อมูล
+        type_answer = db.get_type_answer()  # ดึงประเภทของคำตอบจากฐานข้อมูล
 
-        # ตรวจสอบว่าข้อความใน target_words ปรากฏในข้อความหรือไม่
-        for word in target_words:
-            if word in message.content:
-                await message.channel.send("Found target word: " + word)
+        if type_answer == "in_word":  # ตรวจสอบประเภทของคำตอบ
+            for word in question:  # วนลูปคำค้นหา
+                if word in message.content:  # ตรวจสอบว่ามีคำถามในข้อความหรือไม่
+                    await message.channel.send(answer)  # ส่งคำตอบกลับไปในช่องเดิมที่ข้อความถูกส่งมา
 
-        if "GG" in message.content:  # ตรวจสอบว่ามีคำว่า "GG" ในข้อความหรือไม่
-            await message.channel.send("EZ")  # ส่งข้อความ "EZ" กลับไปในช่องเดิมที่ข้อความถูกส่งมา
-
-        if message.content == "EZ":  # ตรวจสอบว่าข้อความเป็น "EZ" แบบตรงตัวเท่านั้น
-            await message.channel.send("EZ")
+        if type_answer == "match":  # ตรวจสอบประเภทของคำตอบ
+            for word in question:
+                if word == message.content: # ตรวจสอบว่าคำถามเป็นคำตอบที่ตรงกันหรือไม่
+                    await message.channel.send(answer)
 
         await bot.process_commands(message)  # ตรวจสอบว่าข้อความเป็นคำสั่งหรือไม่ และประมวลผลต่อไป
+
+#on_member_join
+    @bot.event
+    async def on_member_join(member):
+        # สร้างข้อความต้อนรับ
+        welcome_message = f"👋 ยินดีต้อนรับคุณ **{member.display_name}** เข้าสู่ **{member.guild.name}** เซิฟเวอร์\nกรุณาใช้คำสั่ง /register สำหรับเพื่อแสดงแชลแนลต่าง ๆ ในเซิฟเวอร์\n"
+        
+        # หาช่องที่ต้องการส่งข้อความต้อนรับ
+        channel = member.guild.system_channel  # หากต้องการให้ส่งในช่อง system_channel
+        # channel = member.guild.get_channel(1136582643765493772)
+        # หากต้องการส่งในช่องที่มีชื่อ "welcome" สามารถใช้ชื่อได้เลย เช่น member.guild.get_channel("welcome")
+        # หรือหากต้องการใช้ ID ของช่องให้ใช้ member.guild.get_channel(ID) โดย ID เป็น ID ของช่อง
+        # ตัวอย่างเช่น: channel = member.guild.get_channel(CHANNEL_ID)
+        
+        if channel is not None:
+            # ส่งข้อความต้อนรับ
+            await channel.send(welcome_message)
+            
 
 #function update bot data
     async def update_bot():
@@ -359,67 +433,55 @@ def run():
             await interaction.response.send_message('คำสั่งนี้สามารถใช้ได้เฉพาะในช่องที่กำหนดเท่านั้น', ephemeral=True)
             return
 
-#check permission role
-    async def has_permissions(interaction: discord.Interaction):
-        role_id = 1136919900816945232
-        guild = interaction.guild
-        member = guild.get_member(interaction.user.id)
-        role = guild.get_role(role_id)
-        return role in member.roles
 
 #context menu zone
 
     @bot.tree.context_menu(name="View Profile")
+    @have_permission()
     async def get_profile(interaction: discord.Interaction, of : discord.Member):
         view = ProfileView(of)
         # await update_bot #อัพเดทข้อมูลบอท
         await interaction.response.send_message(embed=view.embed, view=view, ephemeral=True)
     
+    @get_profile.error
+    async def get_profile_error(interaction: discord.Interaction, error):
+        await interaction.response.send_message("คุณไม่มีสิทธิ์ในการใช้คำสั่งนี้", ephemeral=True)
+        
+    
 
 #slash commands zone
 
     #register
-    @bot.tree.command(description='Register for New member | ลงทะเบียนสำหรับสมาชิกใหม่') 
+    @bot.tree.command(description='Register for New member | ลงทะเบียนสำหรับสมาชิกใหม่')
     async def register(interaction: discord.Interaction):
         FEEDBACK_CH = [1187345770400194654] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
         await feedback(interaction, FEEDBACK_CH)
+        
 
         register_modal = RegisterModal()
         register_modal.user = interaction.user
         await interaction.response.send_modal(register_modal)
-    # @bot.tree.command(description='Register for New member | ลงทะเบียนสำหรับสมาชิกใหม่') #คำอธิบายของคำสั่ง
-    # async def register(interaction : discord.Interaction):
-    #     register_modal = RegisterModal()
-    #     register_modal.user = interaction.user
-    #     channel = interaction.guild.get_channel(settings.FEEDBACK_CH) #ดึงช่องที่ต้องการส่งข้อความ
-    #     if settings.FEEDBACK_CH and interaction.channel_id != settings.FEEDBACK_CH:
-    #         await interaction.response.send_message("คำสั่งนี้สามารถใช้ได้เฉพาะในช่องที่กำหนดเท่านั้น", ephemeral=True)
-    #     else:
-    #         await interaction.response.send_modal(register_modal) #รองรับการกำหนด channel ที่ใช้งานได้
-        
-
+    
 
     #profile
     @bot.tree.command(description='View profile | ดูโปรไฟล์ของผู้ใช้')
+    @have_permission()
     @app_commands.describe(of='ดูโปรไฟล์ของผู้ใช้ที่กำหนด')
     async def profile(interaction: discord.Interaction, of: discord.Member):
         FEEDBACK_CH = []
         await feedback(interaction, FEEDBACK_CH)
-
-        # FEEDBACK_CH = [] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
-        # valid_channel = interaction.channel_id in FEEDBACK_CH
-
-        # if not valid_channel and FEEDBACK_CH:
-        #     await interaction.response.send_message("คำสั่งนี้สามารถใช้ได้เฉพาะในช่องที่กำหนดเท่านั้น", ephemeral=True)
-        #     return
         
-        view = ProfileView(of) #ส่งข้อมูลตัวแปรเข้าตัวทำงานหลัก
+        view = ProfileView2(of) #ส่งข้อมูลตัวแปรเข้าตัวทำงานหลัก
         await interaction.response.send_message(embed=view.embed, view=view, ephemeral=True) #แสดง embed ที่อยู่ใน ProfileView พร้อมส่ง of ไปด้วย
-            
+
+    @profile.error
+    async def profile_error(interaction: discord.Interaction, error):
+        await interaction.response.send_message("คุณไม่มีสิทธิ์ในการใช้คำสั่งนี้", ephemeral=True)       
         
 
     #study_plan
     @bot.tree.command(description='Manage study plan | จัดการตารางเรียน')
+    @have_permission()
     @app_commands.choices(
         day=[
             app_commands.Choice(name="🔴 Sunday - วันอาทิตย์", value="1"),
@@ -430,18 +492,23 @@ def run():
             app_commands.Choice(name="🔵 Friday - วันศุกร์", value="6"),
             app_commands.Choice(name="🟣 Saturday - วันเสาร์", value="7"),
         ])
-    @app_commands.describe(day='วัน', start='เวลาเริ่มเรียน **EX. 09.00**', until='เวลาเลิกเรียน **EX. 18.00**', subject='ชื่อวิชา')
+    @app_commands.describe(day='วัน', start='เวลาเริ่มเรียน **EX. 09:00**', until='เวลาเลิกเรียน **EX. 18:00**', subject='ชื่อวิชา')
     async def study_plan_edit(interaction: discord.Interaction, day: app_commands.Choice[str], start: str, until: str, subject: str):
 
         FEEDBACK_CH = [] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
         await feedback(interaction, FEEDBACK_CH)
 
-        db.study_plan(day.name, start, until, subject, interaction.user.id, day.value)
+        # db.study_plan(day.name, start, until, subject, interaction.user.id, day.value)
 
         study_plan_embed = StudyPlanEmbed(day.name, start, until, subject)
         await interaction.response.send_message(embed=study_plan_embed.embed, view=study_plan_embed)
+    
+    @study_plan_edit.error
+    async def study_plan_edit_error(interaction: discord.Interaction, error):
+        await interaction.response.send_message("คุณไม่มีสิทธิ์ในการใช้คำสั่งนี้", ephemeral=True)
 
     @bot.tree.command(description='View study plan | ดูตารางเรียน')
+    @have_permission()
     @app_commands.choices(
         day=[
             app_commands.Choice(name="📅 ALL days - ทุกวัน", value="8"),
@@ -456,7 +523,7 @@ def run():
     )
     @app_commands.describe(day='วันที่ต้องการดูตารางเรียน',share_to='ระบุผู้ใช้ที่ต้องการแชร์ {@user}')
     async def study_plan_view(interaction: discord.Interaction, day: app_commands.Choice[str], share_to: discord.Member=None):
-        study_plan_embed = StudyPlanEmbed(day.name, "09.00", "18.00", "วิชาการเขียนโปรแกรม")
+        study_plan_embed = StudyPlanView(interaction.user.id, day.value)
 
         FEEDBACK_CH = [] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
         await feedback(interaction, FEEDBACK_CH)
@@ -466,9 +533,13 @@ def run():
             await interaction.response.send_message(f'ได้แชร์ตารางเรียนไปให้ {share_to} แล้ว ✅', ephemeral=True)
         await interaction.response.send_message(embed=study_plan_embed.embed, view=study_plan_embed, ephemeral=True)
 
+    @study_plan_view.error
+    async def study_plan_view_error(interaction: discord.Interaction, error):
+        await interaction.response.send_message("คุณไม่มีสิทธิ์ในการใช้คำสั่งนี้", ephemeral=True)
 
     #groupwork
     @bot.tree.command(description='Create groupwork | สร้างกลุ่มงาน')
+    @have_permission()
     @app_commands.describe(topic='หัวข้อ', descriptions='รายละเอียดเพิ่มเติม', member_amount='จำนวนสมาชิก')
     async def groupwork(interaction: discord.Interaction, topic: str, descriptions: str, member_amount: int):
         # print(interaction.user.display_name)
@@ -479,10 +550,15 @@ def run():
         initial_member = [interaction.user.display_name]
         view = GroupworkView(topic, descriptions, member_amount, initial_member)
         await interaction.response.send_message(embed=view.embed, view=view)
+
+    @groupwork.error
+    async def groupwork_error(interaction: discord.Interaction, error):
+        await interaction.response.send_message("คุณไม่มีสิทธิ์ในการใช้คำสั่งนี้", ephemeral=True)
     
 
     #random
     @bot.tree.command(description='Random | การสุ่ม')
+    @have_permission()
     @app_commands.describe(entries='Options to randomize using spaces as separators. | สิ่งที่ต้องการสุ่ม โดยใช้ช่องว่างเป็นตัวคั่น')
     async def randoms(interaction: discord.Interaction, entries: str):
 
@@ -491,11 +567,15 @@ def run():
 
         entries_list = entries.split(' ')
         random_result = random.choice(entries_list)
-        await interaction.response.send_message(f'ผลลัพธ์ที่ได้คือ {random_result}', ephemeral=True)
+        await interaction.response.send_message(f'🎉 ผลลัพธ์ที่ได้คือ **{random_result}** 🎉')
     
+    @randoms.error
+    async def randoms_error(interaction: discord.Interaction, error):
+        await interaction.response.send_message("คุณไม่มีสิทธิ์ในการใช้คำสั่งนี้", ephemeral=True)
 
     #poll
     @bot.tree.command(name="poll", description="Create a poll (max 5 options) | สร้างโพลล์ (มากสุด 5 ตัวเลือก)")
+    @have_permission()
     @app_commands.checks.has_permissions(manage_messages=True)
     @app_commands.describe(question="คุณต้องการจะถามอะไร", option1="ตัวเลือกที่ 1", option2="ตัวเลือกที่ 2", option3="ตัวเลือกที่ 3", option4="ตัวเลือกที่ 4",option5="ตัวเลือกที่ 5", role="mention (role) | คุณจะกล่าวสิ่งนี้กับใคร (บทบาท)")
     async def poll(interaction: discord.Interaction, question: str, option1: str, option2: str, option3:str=None, option4:str=None, option5:str=None, role:discord.Role=None):
@@ -582,13 +662,16 @@ def run():
             await interaction.delete_original_response()
             await interaction.followup.send("An error occured, try again later.", ephemeral=True)
 
+    @poll.error
+    async def poll_error(interaction: discord.Interaction, error):
+        await interaction.response.send_message("คุณไม่มีสิทธิ์ในการใช้คำสั่งนี้", ephemeral=True)
 
     #delete commands unused
     @bot.command(name='deletecommands', aliases=['clear'])
     async def delete_commands(ctx):
         bot.tree.clear_commands(guild=None)
         await bot.tree.sync()
-        await ctx.send('Unused Commands deleted.')
+        await ctx.send('Unused Commands deleted.')  
 
     
     
