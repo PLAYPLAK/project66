@@ -13,9 +13,10 @@ from datetime import datetime
 from discord.ext import commands
 from discord import app_commands
 import ast
-from database import Database
 
-db = Database()
+# from database import Database
+# db = Database()
+
 
 
 logger = settings.logging.getLogger("bot")
@@ -413,37 +414,7 @@ class ProfileView(discord.ui.View):
         # Cleanup logic if needed
         pass
    
-class ProfileView2(discord.ui.View):
-    def __init__(self, of: discord.Member):
-        super().__init__()
-        
-        self.embed = discord.Embed(
-            title='Profile',
-            description=f"ชื่อ-สกุล : ปิยะโรจน์ ขันธิฉัตร์"+
-                        f"\nFullname : Piyarot Khantichat",
-            color=discord.Color.green(),
-        )
-        self.embed.add_field(
-            name='Student ID',
-            value=f"64015087",
-            inline=False
-        )
-        self.embed.add_field(
-            name='E-mail',
-            value=f"piyarot.ongkillz@gmail.com",
-            inline=False
-        )
-        self.embed.add_field(
-            name='Tel.',
-            value=f"-",
-            inline=False
-        )
-        
-        self.embed.set_thumbnail(url=of.avatar)
 
-    async def on_timeout(self):
-        # Cleanup logic if needed
-        pass
 
 def run():
     intents = discord.Intents.all()
@@ -504,29 +475,48 @@ def run():
     async def on_message(message):
         if message.author == bot.user:  # ไม่ต้องตอบกลับถ้าข้อความเป็นของบอทเอง
             return
+        
+        channel_respond = [1136592709696630935]
 
-        question = db.get_question()  # ดึงคำถามจากฐานข้อมูล
-        answer = db.get_answer()  # ดึงคำตอบจากฐานข้อมูล
-        type_answer = db.get_type_answer()  # ดึงประเภทของคำตอบจากฐานข้อมูล
+        if channel_respond and message.channel.id not in channel_respond:
+            return
 
-        if type_answer == "in_word":  # ตรวจสอบประเภทของคำตอบ
-            for word in question:  # วนลูปคำค้นหา
-                if word in message.content:  # ตรวจสอบว่ามีคำถามในข้อความหรือไม่
-                    await message.channel.send(answer)  # ส่งคำตอบกลับไปในช่องเดิมที่ข้อความถูกส่งมา
+        # question = db.get_question()  # ดึงคำถามจากฐานข้อมูล
+        # answer = db.get_answer()  # ดึงคำตอบจากฐานข้อมูล
+        # type_answer = db.get_type_answer()  # ดึงประเภทของคำตอบจากฐานข้อมูล
 
-        if type_answer == "match":  # ตรวจสอบประเภทของคำตอบ
-            for word in question:
-                if word == message.content: # ตรวจสอบว่าคำถามเป็นคำตอบที่ตรงกันหรือไม่
-                    await message.channel.send(answer)
+        # if type_answer == "in_word":  # ตรวจสอบประเภทของคำตอบ
+        #     for word in question:  # วนลูปคำค้นหา
+        #         if word in message.content:  # ตรวจสอบว่ามีคำถามในข้อความหรือไม่
+        #             await message.channel.send(answer)  # ส่งคำตอบกลับไปในช่องเดิมที่ข้อความถูกส่งมา
+
+        # if type_answer == "match":  # ตรวจสอบประเภทของคำตอบ
+        #     for word in question:
+        #         if word == message.content: # ตรวจสอบว่าคำถามเป็นคำตอบที่ตรงกันหรือไม่
+        #             await message.channel.send(answer)
+
+        if "สวัสดี" in message.content:  # ตรวจสอบว่ามีคำว่า "สวัสดี" ในข้อความหรือไม่
+            await message.channel.send("สวัสดีครับ")
+
+        if "GG" == message.content:  # ตรวจสอบว่าข้อความเป็น "GG" หรือไม่
+            await message.channel.send("GGWP")
 
         await bot.process_commands(message)  # ตรวจสอบว่าข้อความเป็นคำสั่งหรือไม่ และประมวลผลต่อไป
 
 #on_member_join
     @bot.event
-    async def on_member_join(member):
+    async def on_member_join(member : discord.Member):
         # สร้างข้อความต้อนรับ
-        welcome_message = f"👋 ยินดีต้อนรับคุณ **{member.display_name}** เข้าสู่ **{member.guild.name}** เซิฟเวอร์\nกรุณาใช้คำสั่ง /register สำหรับเพื่อแสดงแชลแนลต่าง ๆ ในเซิฟเวอร์\n"
+        welcome_message = f"👋 ยินดีต้อนรับคุณ **{member.mention}** เข้าสู่เซิฟเวอร์\n\nกรุณาใช้คำสั่ง /register สำหรับลงทะเบียนเพื่อแสดงแชลแนลต่าง ๆ ในเซิฟเวอร์\n"
         
+        welcome_embed = discord.Embed(
+            description= welcome_message,
+            color=discord.Color.random(),
+        )
+        # welcome_embed.set_image(url="https://cdn.discordapp.com/attachments/1206514380645208104/1213394754436472862/anime.gif?ex=65f550ed&is=65e2dbed&hm=0d81a259401b312e9ac6a54e7a84863c56448ba7aa6a50461bd0db53cf5c007d&")
+        welcome_embed.set_author(name=member.guild.name, icon_url=member.guild.icon)
+        welcome_embed.set_thumbnail(url=member.display_avatar)
+
         # หาช่องที่ต้องการส่งข้อความต้อนรับ
         channel = member.guild.system_channel  # หากต้องการให้ส่งในช่อง system_channel
         # channel = member.guild.get_channel(1136582643765493772)
@@ -536,7 +526,7 @@ def run():
         
         if channel is not None:
             # ส่งข้อความต้อนรับ
-            await channel.send(welcome_message)
+            await channel.send(embed=welcome_embed)
             
 
 #function update bot data
@@ -590,7 +580,7 @@ def run():
         FEEDBACK_CH = []
         await feedback(interaction, FEEDBACK_CH)
         
-        view = ProfileView2(of) #ส่งข้อมูลตัวแปรเข้าตัวทำงานหลัก
+        view = ProfileView(of) #ส่งข้อมูลตัวแปรเข้าตัวทำงานหลัก
         await interaction.response.send_message(embed=view.embed, view=view, ephemeral=True) #แสดง embed ที่อยู่ใน ProfileView พร้อมส่ง of ไปด้วย
 
     @profile.error
