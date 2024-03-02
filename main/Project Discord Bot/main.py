@@ -69,7 +69,7 @@ class RegisterModal(discord.ui.Modal, title='Register'):
         channel = interaction.guild.get_channel(settings.FEEDBACK_CH) #ดึงช่องที่ต้องการส่งข้อความ
 
 
-        # db.register_user( self.std_id.value, self.name_th.value, self.name_en.value, interaction.user.id, self.tel_num.value, self.e_mail.value)
+        db.register_user( self.std_id.value, self.name_th.value, self.name_en.value, interaction.user.id, self.tel_num.value, self.e_mail.value, interaction.user.display_name, interaction.guild_id)
         
         embed1 = discord.Embed(
             title="✅ Register success!!",
