@@ -13,9 +13,9 @@ from datetime import datetime
 from discord.ext import commands
 from discord import app_commands
 import ast
-# from database import Database
+from database import Database
 
-# db = Database()
+db = Database()
 
 
 logger = settings.logging.getLogger("bot")
@@ -237,14 +237,33 @@ class StudyPlanEmbed(discord.ui.View):
         )       
 
 class StudyPlanView(discord.ui.View):
-    def __init__(self, user_id : int,  day_value: int):
+    def __init__(self, user_id : int,  day_values: int):
         super().__init__()
 
-        if day_value == 8:
-            result = db.study_plan_view(user_id, day_value)
+        # value_string = ''
+        if day_values == 8:
+            print("pass")
+            day, times, subject, day_num = db.study_plan_view(12345679, day_values)
+            time = [ast.literal_eval(time_range) for time_range in times]
+
+            value_string = ''
+            for i in range(len(day)):
+                value_string += f'  {day[i]} \n {time[i][0]} น. - {time[i][1]} น. | {subject[i]}\n'
+
+            self.embed = discord.Embed(
+                title='Study Plan 2',
+                description="รายละเอียด 2",
+                color=discord.Color.green(),
+            )
+            self.embed.add_field(
+                name= day[1],
+                value= value_string,
+                inline= False
+            )
+
 
         else:
-            day, times, subject, day_num = db.study_plan_view(user_id, day_value)
+            day, times, subject, day_num = db.study_plan_view(12345679, day_values)
             time = [ast.literal_eval(time_range) for time_range in times]
 
             value_string = ''
