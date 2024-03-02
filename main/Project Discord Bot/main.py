@@ -240,29 +240,129 @@ class StudyPlanView(discord.ui.View):
     def __init__(self, user_id : int,  day_values: int):
         super().__init__()
 
-        # value_string = ''
-        if day_values == 8:
+        num = 8
+        print(type(day_values))
+        print(type(num))
+        
+
+        if int(day_values) == num:
             print("pass")
-            day, times, subject, day_num = db.study_plan_view(12345679, day_values)
-            time = [ast.literal_eval(time_range) for time_range in times]
+            day1, times1, subject1, day_num1 = db.study_plan_view(12345679, 1)
+            day2, times2, subject2, day_num2 = db.study_plan_view(12345679, 2)
+            day3, times3, subject3, day_num3 = db.study_plan_view(12345679, 3)
+            day4, times4, subject4, day_num4 = db.study_plan_view(12345679, 4)
+            day5, times5, subject5, day_num5 = db.study_plan_view(12345679, 5)
+            day6, times6, subject6, day_num6 = db.study_plan_view(12345679, 6)
+            day7, times7, subject7, day_num7 = db.study_plan_view(12345679, 7)
 
-            value_string = ''
-            for i in range(len(day)):
-                value_string += f'  {day[i]} \n {time[i][0]} น. - {time[i][1]} น. | {subject[i]}\n'
+            value_string1=' '
+            value_string2=' '
+            value_string3=' '
+            value_string4=' '
+            value_string5=' '
+            value_string6=' '
+            value_string7=' '
 
+            if day1 == None :
+                value_string1 = ' - '
+
+            else :
+                time1 = [ast.literal_eval(time_range) for time_range in times1]
+                for i in range(len(day1)):
+                    value_string1 += f'   {time1[i][0]} น. - {time1[i][1]} น. | {subject1[i]}\n'
+                
+            if day2 == None :
+                value_string2 = ' - '
+
+            else :
+                time2 = [ast.literal_eval(time_range) for time_range in times2]
+                for i in range(len(day2)):
+                    value_string2 += f'   {time2[i][0]} น. - {time2[i][1]} น. | {subject2[i]}\n'
+                    
+            if day3 == None :
+                value_string3 = ' - '
+
+            else :
+                time3 = [ast.literal_eval(time_range) for time_range in times3]
+                for i in range(len(day3)):
+                    value_string3 += f'   {time3[i][0]} น. - {time3[i][1]} น. | {subject3[i]}\n'
+                
+            if day4 == None :
+                value_string4 = ' - '
+
+            else :
+                time4 = [ast.literal_eval(time_range) for time_range in times4]
+                for i in range(len(day4)):
+                    value_string4 += f'   {time4[i][0]} น. - {time4[i][1]} น. | {subject4[i]}\n'
+
+            if day5 == None :
+                value_string5 = ' - '
+
+            else :
+                time5 = [ast.literal_eval(time_range) for time_range in times5]
+                for i in range(len(day5)):
+                    value_string5 += f'   {time5[i][0]} น. - {time5[i][1]} น. | {subject5[i]}\n'
+                
+            if day6 == None :
+                value_string6 = ' - '
+
+            else :
+                time6 = [ast.literal_eval(time_range) for time_range in times6]
+                for i in range(len(day6)):
+                    value_string6 += f'   {time6[i][0]} น. - {time6[i][1]} น. | {subject6[i]}\n'
+                    
+            if day7 == None :
+                value_string7 = ' - '
+
+            else :
+                time7 = [ast.literal_eval(time_range) for time_range in times7]
+                for i in range(len(day7)):
+                    value_string7 += f'   {time7[i][0]} น. - {time7[i][1]} น. | {subject7[i]}\n'
+
+
+            # สร้าง Embed จาก value_string ที่ได้
             self.embed = discord.Embed(
-                title='Study Plan 2',
-                description="รายละเอียด 2",
+                title='Study Plan',
+                description="รายละเอียด",
                 color=discord.Color.green(),
             )
             self.embed.add_field(
-                name= day[1],
-                value= value_string,
+                name= '🔴 Sunday - วันอาทิตย์',
+                value= value_string1,
+                inline= False
+            )
+            self.embed.add_field(
+                name= '🟡 Monday - วันจันทร์',
+                value= value_string2,
+                inline= False
+            )
+            self.embed.add_field(
+                name= '🩷 Tuesday - วันอังคาร',
+                value= value_string3,
+                inline= False
+            )
+            self.embed.add_field(
+                name= '🟢 Wednesday - วันพุธ',
+                value= value_string4,
+                inline= False
+            )
+            self.embed.add_field(
+                name= '🟠 Thursday - วันพฤหัสบดี',
+                value= value_string5,
+                inline= False
+            )
+            self.embed.add_field(
+                name= '🔵 Friday - วันศุกร์',
+                value= value_string6,
+                inline= False
+            )
+            self.embed.add_field(
+                name= '🟣 Saturday - วันเสาร์',
+                value= value_string7,
                 inline= False
             )
 
-
-        else:
+        else :
             day, times, subject, day_num = db.study_plan_view(12345679, day_values)
             time = [ast.literal_eval(time_range) for time_range in times]
 
