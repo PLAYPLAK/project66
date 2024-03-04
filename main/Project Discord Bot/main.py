@@ -69,7 +69,7 @@ class RegisterModal(discord.ui.Modal, title='Register'):
         channel = interaction.guild.get_channel(settings.FEEDBACK_CH) #ดึงช่องที่ต้องการส่งข้อความ
 
 
-        db.register_user( self.std_id.value, self.name_th.value, self.name_en.value, interaction.user.id, self.tel_num.value, self.e_mail.value, interaction.user.display_name, interaction.guild_id)
+        db.register_user( self.std_id.value, self.name_th.value, self.name_en.value, interaction.user.id, interaction.user.display_name, interaction.guild_id, self.tel_num.value, self.e_mail.value)
         
         embed1 = discord.Embed(
             title="✅ Register success!!",
@@ -383,28 +383,29 @@ class StudyPlanView(discord.ui.View):
             )
 
 class ProfileView(discord.ui.View):
-    def __init__(self, of: discord.Member):
+    def __init__(self, interaction : discord.Interaction, of: discord.Member):
         super().__init__()
         
         self.embed = discord.Embed(
             title='Profile',
-            description=f"Name : {db.profile(of.id,'TH')}"+
+            description=f"ชื่อ-สกุล : {db.profile(of.id,'TH', interaction.guild_id)}"+
+                        f"\nFull Name : {db.profile(of.id,'EN', interaction.guild_id)}"+
                         f"\nUsername : {of.name}",
             color=discord.Color.green(),
         )
         self.embed.add_field(
             name='ID',
-            value=f"{db.profile(of.id,'ID')}",
+            value=f"{db.profile(of.id,'ID', interaction.guild_id)}",
             inline=False
         )
         self.embed.add_field(
             name='E-mail',
-            value=f"{db.profile(of.id,'Email')}",
+            value=f"{db.profile(of.id,'Email', interaction.guild_id)}",
             inline=False
         )
         self.embed.add_field(
             name='Tel.',
-            value=f"{db.profile(of.id,'Phone')}",
+            value=f"{db.profile(of.id,'Phone', interaction.guild_id)}",
             inline=False
         )
         
@@ -476,7 +477,7 @@ def run():
         if message.author == bot.user:  # ไม่ต้องตอบกลับถ้าข้อความเป็นของบอทเอง
             return
         
-        channel_respond = [1136592709696630935]
+        channel_respond = db.check_feedback_ch("register", discord.Interaction.guild_id)
 
         if channel_respond and message.channel.id not in channel_respond:
             return
@@ -548,7 +549,7 @@ def run():
     @bot.tree.context_menu(name="View Profile")
     @have_permission()
     async def get_profile(interaction: discord.Interaction, of : discord.Member):
-        view = ProfileView(of)
+        view = ProfileView(interaction, of)
         # await update_bot #อัพเดทข้อมูลบอท
         await interaction.response.send_message(embed=view.embed, view=view, ephemeral=True)
     
@@ -563,7 +564,7 @@ def run():
     #register
     @bot.tree.command(description='Register for New member | ลงทะเบียนสำหรับสมาชิกใหม่')
     async def register(interaction: discord.Interaction):
-        FEEDBACK_CH = [1187345770400194654] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
+        FEEDBACK_CH = db.check_feedback_ch("register", interaction.guild_id) #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
         await feedback(interaction, FEEDBACK_CH)
         
 
@@ -577,10 +578,10 @@ def run():
     @have_permission()
     @app_commands.describe(of='ดูโปรไฟล์ของผู้ใช้ที่กำหนด')
     async def profile(interaction: discord.Interaction, of: discord.Member):
-        FEEDBACK_CH = []
+        FEEDBACK_CH = db.check_feedback_ch("profile", interaction.guild_id)
         await feedback(interaction, FEEDBACK_CH)
         
-        view = ProfileView(of) #ส่งข้อมูลตัวแปรเข้าตัวทำงานหลัก
+        view = ProfileView(interaction, of) #ส่งข้อมูลตัวแปรเข้าตัวทำงานหลัก
         await interaction.response.send_message(embed=view.embed, view=view, ephemeral=True) #แสดง embed ที่อยู่ใน ProfileView พร้อมส่ง of ไปด้วย
 
     @profile.error
@@ -604,7 +605,7 @@ def run():
     @app_commands.describe(day='วัน', start='เวลาเริ่มเรียน **EX. 09:00**', until='เวลาเลิกเรียน **EX. 18:00**', subject='ชื่อวิชา')
     async def study_plan_edit(interaction: discord.Interaction, day: app_commands.Choice[str], start: str, until: str, subject: str):
 
-        FEEDBACK_CH = [] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
+        FEEDBACK_CH = db.check_feedback_ch("plan_edit", interaction.guild_id) #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
         await feedback(interaction, FEEDBACK_CH)
 
         # db.study_plan(day.name, start, until, subject, interaction.user.id, day.value)
@@ -634,7 +635,7 @@ def run():
     async def study_plan_view(interaction: discord.Interaction, day: app_commands.Choice[str], share_to: discord.Member=None):
         study_plan_embed = StudyPlanView(interaction.user.id, day.value)
 
-        FEEDBACK_CH = [] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
+        FEEDBACK_CH = db.check_feedback_ch("plan_view", interaction.guild_id) #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
         await feedback(interaction, FEEDBACK_CH)
 
         if share_to is not None:
@@ -653,7 +654,7 @@ def run():
     async def groupwork(interaction: discord.Interaction, topic: str, descriptions: str, member_amount: int):
         # print(interaction.user.display_name)
 
-        FEEDBACK_CH = [] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
+        FEEDBACK_CH = db.check_feedback_ch("group", interaction.guild_id) #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
         await feedback(interaction, FEEDBACK_CH)
 
         initial_member = [interaction.user.display_name]
@@ -671,7 +672,7 @@ def run():
     @app_commands.describe(entries='Options to randomize using spaces as separators. | สิ่งที่ต้องการสุ่ม โดยใช้ช่องว่างเป็นตัวคั่น')
     async def randoms(interaction: discord.Interaction, entries: str):
 
-        FEEDBACK_CH = [] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
+        FEEDBACK_CH = db.check_feedback_ch("random", interaction.guild_id) #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
         await feedback(interaction, FEEDBACK_CH)
 
         entries_list = entries.split(' ')
@@ -689,7 +690,7 @@ def run():
     @app_commands.describe(question="คุณต้องการจะถามอะไร", option1="ตัวเลือกที่ 1", option2="ตัวเลือกที่ 2", option3="ตัวเลือกที่ 3", option4="ตัวเลือกที่ 4",option5="ตัวเลือกที่ 5", role="mention (role) | คุณจะกล่าวสิ่งนี้กับใคร (บทบาท)")
     async def poll(interaction: discord.Interaction, question: str, option1: str, option2: str, option3:str=None, option4:str=None, option5:str=None, role:discord.Role=None):
 
-        FEEDBACK_CH = [] #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
+        FEEDBACK_CH = db.check_feedback_ch("poll", interaction.guild_id) #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
         await feedback(interaction, FEEDBACK_CH)
 
         await interaction.response.send_message("⌛ กำลังสร้างโพลล์...", ephemeral=True)
@@ -775,6 +776,7 @@ def run():
     async def poll_error(interaction: discord.Interaction, error):
         await interaction.response.send_message("คุณไม่มีสิทธิ์ในการใช้คำสั่งนี้", ephemeral=True)
 
+   
     #delete commands unused
     @bot.command(name='deletecommands', aliases=['clear'])
     async def delete_commands(ctx):
