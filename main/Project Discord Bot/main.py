@@ -510,6 +510,13 @@ def run():
         # สร้างข้อความต้อนรับ
         welcome_message = f"👋 ยินดีต้อนรับคุณ **{member.mention}** เข้าสู่เซิฟเวอร์\n\nกรุณาใช้คำสั่ง /register สำหรับลงทะเบียนเพื่อแสดงแชลแนลต่าง ๆ ในเซิฟเวอร์\n"
         
+        db_welcome_msg = db.check_alert_gui(member.guild.id)
+
+        if db_welcome_msg == "" :
+            welcome_message == welcome_message
+        else :
+            welcome_message = db_welcome_msg
+
         welcome_embed = discord.Embed(
             description= welcome_message,
             color=discord.Color.random(),
@@ -608,7 +615,7 @@ def run():
         FEEDBACK_CH = db.check_feedback_ch("plan_edit", interaction.guild_id) #ไอดีแชลแนลที่ต้องการให้ตอบสนอง
         await feedback(interaction, FEEDBACK_CH)
 
-        # db.study_plan(day.name, start, until, subject, interaction.user.id, day.value)
+        db.study_plan(day.name, start, until, subject, interaction.user.id, day.value)
 
         study_plan_embed = StudyPlanEmbed(day.name, start, until, subject)
         await interaction.response.send_message(embed=study_plan_embed.embed, view=study_plan_embed)
