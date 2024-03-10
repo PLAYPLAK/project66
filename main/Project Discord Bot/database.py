@@ -1,5 +1,5 @@
 from mysql import connector
-
+import ast
 PASSWORD = '' 
 HOST = '127.0.0.1'
 USERNAME = 'root'
@@ -28,37 +28,46 @@ class Database:
             self.conn.close()
             print("Connection closed")
 
-    def register_user(self, StudentID, FullNameTH, FullNameENG, UserID, GuildID, profile, Phone = "-", Email = "-"):
+    def register_user(self, StudentID, FullNameTH, FullNameENG, UserID, profile, GuildID, Phone = "-", Email = "-"):
         query1 = "SELECT * FROM user WHERE UserID = %s"
         self.cursor.execute(query1, (UserID,))
         results = self.cursor.fetchall()
 
         if results:
-            query2 = "INSERT INTO member ( EuserID, EguilID, profilename, StudentID) VALUES (%s, %s, %s, %s);"
-            value = ( int(UserID), int(GuildID), str(profile), int(StudentID))
-            self.cursor.execute(query2, value)
-            self.conn.commit()
-            print("ADD Member")
-
+            query1 = "SELECT * FROM member WHERE UserID = %s and StudentID = %s and GuildID = %s"
+            self.cursor.execute(query1, (str(UserID), str(StudentID), str(GuildID)))
+            result_a = self.cursor.fetchone()
+            if result_a :
+                query = "UPDATE member SET profilename = %s WHERE UserID = %s AND GuildID = %s"
+                self.cursor.execute(query, (str(profile), str(UserID), str(GuildID)))
+                self.conn.commit()
+            else :
+                query2 = "INSERT INTO member (  UserID, GuildID, profilename, StudentID) VALUES (%s, %s, %s, %s);"
+                value = ( str(UserID), str(GuildID), str(profile), str(StudentID))
+                self.cursor.execute(query2, value)
+                self.conn.commit()
+                print("ADD Member")
+            # query1 = "SELECT * FROM member WHERE UserID = %s and StudentID = %s"
+            # self.cursor.execute(query1, (str(UserID), str(StudentID)))
+            # result_a = self.cursor.fetchall()
 
         else :
 
             query = "INSERT INTO user ( FullNameTH, FullNameENG, UserID, Phone, Email) VALUES (%s, %s, %s, %s, %s);"
-            value = ( FullNameTH, FullNameENG, int(UserID), Phone, Email)
+            value = ( FullNameTH, FullNameENG, str(UserID), Phone, Email)
             self.cursor.execute(query, value)
             self.conn.commit()
             print("ADD User")
 
-            query2 = "INSERT INTO member ( EuserID, EguilID, profilename, StudentID) VALUES (%s, %s, %s, %s);"
-            value = ( int(UserID), int(GuildID), str(profile), int(StudentID))
+            query2 = "INSERT INTO member ( UserID, GuildID, profilename, StudentID) VALUES (%s, %s, %s, %s);"
+            value = ( str(UserID), str(GuildID), str(profile), str(StudentID))
             self.cursor.execute(query2, value)
             self.conn.commit()
             print("ADD Member")
 
-
-    def study_plan(self, day_name, start_time, end_time, day_ID, subject, UserID):
+    def study_plan(self, day_name, start_time, end_time, subject, UserID, day_ID):
         times = str([start_time, end_time])        
-        value = (day_name, times, subject, int(UserID), int(day_ID))
+        value = (day_name, times, subject, str(UserID), str(day_ID))
         query1 = "SELECT * FROM study_plan WHERE UserID = %s AND day_ID = %s AND time = %s"
         self.cursor.execute(query1, (UserID, day_ID, times))
         results = self.cursor.fetchall()
@@ -69,7 +78,7 @@ class Database:
 
                 if (time == times) and (subjectName != subject) and (day_ID == day_ID2) :
                     query = "UPDATE study_plan SET subjectName = %s WHERE UserID = %s AND time = %s AND  day_ID = %s"
-                    self.cursor.execute(query, (subject, UserID, time, day_ID))
+                    self.cursor.execute(query, (subject, str(UserID), time, str(day_ID)))
                     self.conn.commit()
                     print("Update")
                     break
@@ -79,7 +88,6 @@ class Database:
             self.cursor.execute(query, value)
             self.conn.commit()
             print(f"User with ID {UserID} inserted successfully.")
-
 
     def study_plan_view(self, UserID, day_ID):
 
@@ -120,147 +128,246 @@ class Database:
         else :
             return None,None,None,None
     # insert ข้อความ alert
-    def insert_alert_gui(self, GuildID, alert_Msg, adminID):
+    def insert_alert_gui(self, GuildID, alert_Msg, adminID, roleID="0"):
         query1 = "SELECT * FROM guild WHERE GuildID = %s"
-        self.cursor.execute(query1, (int(GuildID),))
+        self.cursor.execute(query1, (str(GuildID),))
         results = self.cursor.fetchone()
 
         if results :
             query = "UPDATE guild SET Alert_Msg = %s WHERE GuildID = %s"
-            self.cursor.execute(query, (str(alert_Msg), int(GuildID)))
+            self.cursor.execute(query, (str(alert_Msg), str(GuildID)))
             self.conn.commit()
             print("Update Alert")
         else :
-            query = "INSERT INTO guild ( GuildID, Alert_Msg, FadminID) VALUES (%s, %s, %s);"
-            value = ( int(GuildID), str(alert_Msg), int(adminID))
+            query = "INSERT INTO guild ( GuildID, Alert_Msg, FadminID, RoleID) VALUES (%s, %s, %s, %s);"
+            value = ( str(GuildID), str(alert_Msg), str(adminID), str(roleID))
             self.cursor.execute(query, value)
             self.conn.commit()
             print("Insert Alert")
-
     # check ข้อความ alert
     def check_alert_gui(self, guildID):       
         query1 = "SELECT * FROM guild WHERE GuildID = %s"
-        self.cursor.execute(query1, (guildID,))
+        self.cursor.execute(query1, (str(guildID),))
         results = self.cursor.fetchall()
         
         if results :
-            GuildID, GuilName, Alert_Msg, FUserID = results
+            for result in results :
+                GuildID, Alert_Msg, FUserID, role = result
+            print(f" this : {Alert_Msg}")
             return str(Alert_Msg)
 
         else:
             return ""
 
-    def insert_feedback_ch(self, FuncName, channel_reply, GuildID):
+    def insert_feedback_ch(self, FuncName, channel_reply, GuildID, roleID="0"):
         query1 = "SELECT * FROM function_ch WHERE FGuildID = %s AND FuncName = %s"
         self.cursor.execute(query1, (GuildID, str(FuncName)))
         results = self.cursor.fetchone()
 
         if results:
             query = "UPDATE function_ch SET CH_ReplyFuncID = %s WHERE FGuildID = %s AND FuncName = %s"
-            self.cursor.execute(query, (str(channel_reply), int(GuildID), str(FuncName)))
+            self.cursor.execute(query, (str(channel_reply), str(GuildID), str(FuncName)))
             self.conn.commit()
             print("Update CH")
+            if str(FuncName) == "register":
+                query2 = "UPDATE guild SET RoleID = %s WHERE GuildID = %s"
+                self.cursor.execute(query2, (str(roleID), str(GuildID)))
+                self.conn.commit()
+                print("Update Role")
+
 
         else :
             query = "INSERT INTO function_ch ( FuncName, CH_ReplyFuncID, FGuildID) VALUES (%s, %s, %s);"
-            value = ( str(FuncName), str(channel_reply), int(GuildID))
+            value = ( str(FuncName), str(channel_reply), str(GuildID))
             self.cursor.execute(query, value)
             self.conn.commit()
             print("Insert CH")
 
     def check_feedback_ch(self, FuncName, GuildID):       
         query1 = "SELECT * FROM function_ch WHERE FGuildID = %s AND FuncName = %s"
-        self.cursor.execute(query1, (GuildID, FuncName))
+        self.cursor.execute(query1, (str(GuildID), FuncName))
         results = self.cursor.fetchone()
-
         if results:
             funcID,funcName,CH_Reply,FguilID = results
-            return list(CH_Reply)
+            CH_list = ast.literal_eval(CH_Reply)
+            new_CH_Reply = [int(item) for item in CH_list]
+            return new_CH_Reply
         
         else:
             return []
 
-    def profile(self, memberID, key):
+    def profile(self, UserID, key, GuildID):
         query = "SELECT * FROM user WHERE UserID = %s"
-        self.cursor.execute(query, (int(memberID),))
+        self.cursor.execute(query, (str(UserID),))
         result = self.cursor.fetchone()
-        StudentID, FullNameTH, FullNameENG, UserID, Phone, Email = result
+        FullNameTH, FullNameENG, UserID, Phone, Email = result
+        
+        query2 = "SELECT * FROM member WHERE UserID = %s and GuildID = %s"
+        self.cursor.execute(query2, (str(UserID), str(GuildID)))
+        result1 = self.cursor.fetchone()
+        userID, guildID, profile, StudentID = result1
 
-        if str(key) == "TH" :
+        if str(key) == 'TH' :
             return str(FullNameTH)
-        elif str(key) == "ENG" :
+        elif str(key) == 'ENG' :
             return str(FullNameENG)
-        elif str(key) == "ID" :
+        elif str(key) == 'ID' :
             return str(StudentID)
-        elif str(key) == "Phone" :
+        elif str(key) == 'Phone' :
             return str(Phone)
-        elif str(key) == "Email" :
+        elif str(key) == 'Email' :
             return str(Email)
         else :
             return "None" 
 
     def question_ans(self, Word, resMsg, guildID, type_ans):
-
-        query = "INSERT INTO response_msg ( Word, ResMsg, FGuildID, type_ans) VALUES (%s, %s, %s, %s);"
-        value = ( str(Word), str(resMsg), int(guildID), int(type_ans))
+        query = "INSERT INTO response_msg ( Word, ResMsg, GuildID, type_ans) VALUES (%s, %s, %s, %s);"
+        value = ( str(Word), str(resMsg), str(guildID), str(type_ans))
         self.cursor.execute(query, value)
         self.conn.commit()
         print("Insert QA")
 
-
     def check_question_ans(self, GuildID):
-        query1 = "SELECT * FROM response_msg WHERE FGuildID = %s"
-        self.cursor.execute(query1, (int(GuildID), ))
+        query1 = "SELECT * FROM response_msg WHERE GuildID = %s"
+        self.cursor.execute(query1, (str(GuildID), ))
         results = self.cursor.fetchall()
+        resIDs = []
         words = []
         answers = []
         types = []
         if results:
             for result in results :
                 resID, word, resMsg, fguildID, type_ans = result
+                resIDs.append(resID)
                 words.append(word)
                 answers.append(resMsg)
                 types.append(type_ans)
 
-            return words, answers, type_ans
+            return words, answers, types, resIDs
 
         else :
-            return [], [], []
+            return [], [], [], []
         
-    def delete_question(self,):
-        pass
+    def delete_question(self,resID):
+        query = "DELETE FROM response_msg WHERE resID = %s"
+        self.cursor.execute(query, (str(resID), ))
+        self.conn.commit()
 
-    def add_guild(self, GuildID, FadminID, Alert_Msg=""):
+    def add_guild(self, GuildID, FadminID, Alert_Msg="", roleID="0"):
+        print(f"GUILD : {GuildID}")
+        print(f"UserID : {FadminID}")
         query1 = "SELECT * FROM guild WHERE GuildID = %s"
-        self.cursor.execute(query1, (int(GuildID), ))
+        self.cursor.execute(query1, (str(GuildID), ))
         result = self.cursor.fetchone()
 
         if result is not None:
             print("NOT ADD GUILD")
 
         else:
-            query = "INSERT INTO guild ( GuildID, Alert_Msg, FadminID) VALUES (%s, %s, %s);"
-            value = ( int(GuildID), str(Alert_Msg), int(FadminID))
+            query = "INSERT INTO guild ( GuildID, Alert_Msg, FadminID, RoleID) VALUES (%s, %s, %s, %s);"
+            value = ( str(GuildID), str(Alert_Msg), str(FadminID), str(roleID))
             self.cursor.execute(query, value)
             self.conn.commit()
             print("ADD GUILD")
 
+    def check_guild(self, GuildID):
+        print(GuildID)
+        query1 = "SELECT * FROM guild WHERE GuildID = %s"
+        self.cursor.execute(query1, (str(GuildID), ))
+        result = self.cursor.fetchall()
+        print(len(result))
+        if len(result) > 0:
+            return True
+        else:
+            return False
+
     def add_admin(self, adminID, Name):
         query1 = "SELECT * FROM admin WHERE adminID = %s"
-        self.cursor.execute(query1, (int(adminID), ))
-        result = self.cursor.fetchone()
+        self.cursor.execute(query1, (str(adminID), ))
+        result = self.cursor.fetchall()
     
-        if result is not None:
+        if result:
             print("NOT ADD ADMIN")
 
         else:
             query = "INSERT INTO admin ( adminID, name) VALUES (%s, %s);"
-            value = ( int(adminID), str(Name))
+            value = ( str(adminID), str(Name))
             self.cursor.execute(query, value)
             self.conn.commit()
             print("ADD ADMIN")
 
+    def check_admin(self, adminID):
+        query1 = "SELECT * FROM admin WHERE adminID = %s"
+        self.cursor.execute(query1, (str(adminID), ))
+        result = self.cursor.fetchall()
+        if result:
+            return True
+        else:
+            return False
+
+    def get_role(self, guildID):
+        query1 = "SELECT * FROM guild WHERE GuildID = %s"
+        self.cursor.execute(query1, (str(guildID), ))
+        result = self.cursor.fetchone()
+
+        if result:
+            GuildID, Alert_Msg, FUserID, role = result
+            print(role)
+            return int(role)
+        else :
+            return 0
+
+    def update_guild(self, guild, guildname, channel, channelname):
+        query1 = "SELECT * FROM get_guild WHERE guildID = %s and channelID = %s"
+        self.cursor.execute(query1, (str(guild), str(channel)))
+        result = self.cursor.fetchone()    
+
+        if result :
+                query2 = "UPDATE get_guild SET guildName = %s and channelName = %s  WHERE guildID = %s and channelID = %s"
+                self.cursor.execute(query2, (str(guildname), str(channelname), str(guild), str(channelname)))
+                self.conn.commit()
+                print("Update Guild")
+
+        else :
+            query = "INSERT INTO get_guild ( guildID, guildName, channelID, channelName) VALUES (%s, %s, %s, %s);"
+            value = ( str(guild), str(guildname), str(channel), str(channelname))
+            self.cursor.execute(query, value)
+            self.conn.commit()
+            print("Insert Guild")
+
+    def guild_remove(self, guildID):
+        query = "DELETE FROM get_guild WHERE guildID = %s"
+        self.cursor.execute(query, (str(guildID), ))
+        self.conn.commit()
+
+    def get_guild(self):
+        query1 = "SELECT * FROM get_guild"
+        self.cursor.execute(query1)
+        results = self.cursor.fetchall()
+
+        guild_id = []
+        guild_name = []
+        channel_id = []
+        channel_name = []
+
+        if results:
+            for result in results:
+                # Assuming that guild_id and channel_id are integers, adjust as needed
+                gui_id, gui_name, ch_id, ch_name = result
+                guild_id.append(int(gui_id) if gui_id else None)  # Convert to int, handle possible None
+                guild_name.append(gui_name)
+                channel_id.append(int(ch_id) if ch_id else None)  # Convert to int, handle possible None
+                channel_name.append(ch_name)
+
+            print(guild_id)
+            print(guild_name)
+            print(channel_id)
+            print(channel_name)
+
+
+            return guild_id, guild_name, channel_id, channel_name
+        else:
+            return guild_id, guild_name, channel_id, channel_name
 
 
 db = Database()
-
