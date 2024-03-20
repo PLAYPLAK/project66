@@ -1,0 +1,4 @@
+Flask
+zenora
+discord.py
+mysql-connector-python
