@@ -10,6 +10,24 @@ CREATE TABLE IF NOT EXISTS admin (
   name TEXT
 );
 
+-- Table structure for table `user`
+CREATE TABLE IF NOT EXISTS user (
+  FullNameTH TEXT NOT NULL,
+  FullNameENG TEXT NOT NULL,
+  UserID VARCHAR(255) PRIMARY KEY,
+  Phone TEXT,
+  Email TEXT
+);
+
+-- Table structure for table `guild`
+CREATE TABLE IF NOT EXISTS guild (
+  GuildID VARCHAR(255) PRIMARY KEY,
+  Alert_Msg TEXT,
+  FadminID VARCHAR(255) NOT NULL,
+  RoleID TEXT,
+  FOREIGN KEY (FadminID) REFERENCES admin (adminID)
+);
+
 -- Table structure for table `function_ch`
 CREATE TABLE IF NOT EXISTS function_ch (
   FuncID INTEGER PRIMARY KEY AUTO_INCREMENT,
@@ -17,15 +35,6 @@ CREATE TABLE IF NOT EXISTS function_ch (
   CH_ReplyFuncID TEXT,
   FGuildID VARCHAR(255) NOT NULL,
   FOREIGN KEY (FGuildID) REFERENCES guild (GuildID)
-);
-
--- Table structure for table `guild`
-CREATE TABLE IF NOT EXISTS guild (
-  GuildID VARCHAR(255) PRIMARY KEY,
-  Alert_Msg TEXT,
-  FadminID TEXT NOT NULL,
-  RoleID TEXT,
-  FOREIGN KEY (FadminID) REFERENCES admin (adminID)
 );
 
 -- Table structure for table `member`
@@ -60,11 +69,4 @@ CREATE TABLE IF NOT EXISTS study_plan (
   FOREIGN KEY (UserID) REFERENCES user (UserID)
 );
 
--- Table structure for table `user`
-CREATE TABLE IF NOT EXISTS user (
-  FullNameTH TEXT NOT NULL,
-  FullNameENG TEXT NOT NULL,
-  UserID VARCHAR(255) PRIMARY KEY,
-  Phone TEXT,
-  Email TEXT
-);
+
